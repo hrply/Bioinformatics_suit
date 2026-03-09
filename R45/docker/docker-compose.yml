@@ -1,0 +1,214 @@
+# =============================================================================
+# Docker Compose for R-bio GPU Final
+# 用于运行 r-bio:gpu-final 镜像的完整配置
+# =============================================================================
+# 
+# 使用方法:
+#   docker compose up -d          # 后台启动
+#   docker compose logs -f        # 查看日志
+#   docker compose down           # 停止并清理
+#   docker compose ps             # 查看状态
+#
+# =============================================================================
+
+services:
+  # -------------------------------------------------------------------------
+  # R-bio GPU Final - 单细胞分析环境 (GPU 加速)
+  # -------------------------------------------------------------------------
+  rbio-gpu:
+    image: r-bio:gpu-final
+    container_name: rbio-gpu-final
+    hostname: rbio-gpu
+    
+    # GPU 支持 (NVIDIA Container Toolkit 必需)
+    # 方式 1: Docker Compose v2.x (推荐)
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    
+    # 方式 2: Docker Compose v1.x 或备用方案 (取消注释使用)
+    # runtime: nvidia
+    # environment:
+    #   - NVIDIA_VISIBLE_DEVICES=all
+    #   - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    
+    # -------------------------------------------------------------------------
+    # 端口映射
+    # -------------------------------------------------------------------------
+    ports:
+      # RStudio Server
+      - "8787:8787"
+      # Jupyter Lab
+      - "8888:8888"
+      # Shiny Server (可选，如需使用)
+      - "3838:3838"
+    
+    # -------------------------------------------------------------------------
+    # 环境变量 - 用户认证 (强烈建议修改默认密码)
+    # -------------------------------------------------------------------------
+    environment:
+      # RStudio 认证
+      - RSTUDIO_USER=rstudio
+      - RSTUDIO_PASS=YourSecurePassword123!
+      
+      # Jupyter Lab Token (留空表示自动生成)
+      - JUPYTER_TOKEN=
+      
+      # -------------------------------------------------------------------------
+      # 环境变量 - 代理配置 (根据网络环境可选)
+      # -------------------------------------------------------------------------
+      # HTTP/HTTPS 代理 (用于 apt/pip 等)
+      - http_proxy=
+      - https_proxy=
+      
+      # GitHub 代理 (用于访问 GitHub 下载 R 包)
+      - GITHUB_PROXY=
+      
+      # -------------------------------------------------------------------------
+      # 环境变量 - 镜像源配置
+      # -------------------------------------------------------------------------
+      # CRAN 镜像 (R 包)
+      - CRAN_URL=https://cloud.r-project.org
+      # Bioconductor 镜像
+      - BIOC_URL=https://bioconductor.org
+      # PyPI 镜像 (Python 包)
+      - PIP_INDEX_URL=
+      - PIP_TRUSTED_HOST=
+    
+    # -------------------------------------------------------------------------
+    # 数据卷挂载
+    # -------------------------------------------------------------------------
+    volumes:
+      # 数据目录 (推荐挂载到实际数据位置)
+      - ./data:/data
+      # RStudio 用户主目录 (持久化配置和脚本)
+      - ./rstudio-home:/home/rstudio
+      # 可选：挂载原始测序数据
+      # - /ssd/bioraw/online:/data/raw
+      # 可选：挂载结果输出目录
+      # - /path/to/results:/data/results
+      # 可选：挂载参考基因组
+      # - /path/to/genomes:/data/genomes:ro
+    
+    # -------------------------------------------------------------------------
+    # 资源限制 (可选)
+    # -------------------------------------------------------------------------
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '8'
+    #       memory: 64G
+    #     reservations:
+    #       cpus: '4'
+    #       memory: 32G
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+    
+    # -------------------------------------------------------------------------
+    # 健康检查
+    # -------------------------------------------------------------------------
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8787/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    
+    # -------------------------------------------------------------------------
+    # 重启策略
+    # -------------------------------------------------------------------------
+    restart: unless-stopped
+    
+    # -------------------------------------------------------------------------
+    # 日志配置
+    # -------------------------------------------------------------------------
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "3"
+    
+    # -------------------------------------------------------------------------
+    # 网络配置
+    # -------------------------------------------------------------------------
+    # network_mode: bridge
+    # networks:
+    #   - rbio-network
+    
+    # -------------------------------------------------------------------------
+    # 安全选项
+    # -------------------------------------------------------------------------
+    # security_opt:
+    #   - no-new-privileges:true
+    
+    # -------------------------------------------------------------------------
+    # 工作目录
+    # -------------------------------------------------------------------------
+    working_dir: /data
+
+
+# =============================================================================
+# 网络配置 (可选，如需自定义网络)
+# =============================================================================
+# networks:
+#   rbio-network:
+#     driver: bridge
+#     ipam:
+#       config:
+#         - subnet: 172.28.0.0/16
+
+
+# =============================================================================
+# 其他可选服务
+# =============================================================================
+
+# -------------------------------------------------------------------------
+# CPU 版本 (如果没有 GPU)
+# -------------------------------------------------------------------------
+# rbio-cpu:
+#   image: r-bio:cpu-final
+#   container_name: rbio-cpu-final
+#   hostname: rbio-cpu
+#   ports:
+#     - "8788:8787"
+#     - "8889:8888"
+#   environment:
+#     - RSTUDIO_USER=rstudio
+#     - RSTUDIO_PASS=YourSecurePassword123!
+#     - JUPYTER_TOKEN=
+#   volumes:
+#     - ./data:/data
+#     - ./rstudio-home-cpu:/home/rstudio
+#   restart: unless-stopped
+
+
+# -------------------------------------------------------------------------
+# Azimuth 参考版本 (用于细胞注释)
+# -------------------------------------------------------------------------
+# rbio-azimuth:
+#   image: r-bio:gpu-azimuth
+#   container_name: rbio-azimuth
+#   hostname: rbio-azimuth
+#   deploy:
+#     resources:
+#       reservations:
+#         devices:
+#           - driver: nvidia
+#             count: all
+#             capabilities: [gpu]
+#   ports:
+#     - "8789:8787"
+#     - "8890:8888"
+#   environment:
+#     - RSTUDIO_USER=rstudio
+#     - RSTUDIO_PASS=YourSecurePassword123!
+#   volumes:
+#     - ./data:/data
+#     - ./rstudio-home-azimuth:/home/rstudio
+#   restart: unless-stopped
