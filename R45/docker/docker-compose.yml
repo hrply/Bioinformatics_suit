@@ -16,7 +16,7 @@ services:
   # R-bio GPU Final - 单细胞分析环境 (GPU 加速)
   # -------------------------------------------------------------------------
   rbio-gpu:
-    image: rbio:gpu
+    image: rbio:gpuv2
     container_name: rbio
     hostname: rbio
     command: /opt/venv/bin/jupyter lab --config=/home/${RSTUDIO_USER}/.jupyter/jupyter_server_config.py
@@ -45,11 +45,11 @@ services:
     # -------------------------------------------------------------------------
     ports:
       # RStudio Server
-      - "8787:8787"
+      - "20490:8787"
       # Jupyter Lab
-      - "8888:8888"
+      - "20491:8888"
       # Shiny Server (可选，如需使用)
-      - "3838:3838"
+      - "20492:3838"
 
     # -------------------------------------------------------------------------
     # 环境变量
@@ -111,7 +111,7 @@ services:
     # 数据卷挂载
     # -------------------------------------------------------------------------
     volumes:
-      - .entrypoint.sh:/usr/local/bin/entrypoint.sh:ro
+      - ./entrypoint.sh:/usr/local/bin/entrypoint.sh:ro
       # 数据目录
       - ${DATA_PATH:-./data}:/data:rw
       # 临时目录 (不能放在容器内，污染环境且性能较差)

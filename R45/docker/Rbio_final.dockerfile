@@ -159,7 +159,7 @@ RSTUDIO_PASS=${RSTUDIO_PASS:-rstudio}
 echo "${RSTUDIO_USER}:${RSTUDIO_PASS}" | chpasswd
 
 # 设置目录权限
-for dir in "$CUSTOM_PATH" "/home/${RSTUDIO_USER}"; do
+for dir in "${CUSTOM_DIRS[@]}" "/home/${RSTUDIO_USER}"; do
     mkdir -p "$dir"
     chown -R ${RSTUDIO_USER}:${RSTUDIO_USER} "$dir"
 done
