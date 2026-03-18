@@ -569,7 +569,7 @@ devtools::install_github('kharchenkolab/pagoda2', upgrade = FALSE, dependencies 
 remotes::install_github('mojaveazure/seurat-disk', upgrade = TRUE); \
 devtools::install_github('satijalab/seurat-data', upgrade = TRUE); \
 remotes::install_github('satijalab/seurat-wrappers', upgrade = TRUE); \
-remotes::install_github('mianaz/srtdisk@v0.3.1', upgrade = FALSE, dependencies = TRUE); \
+remotes::install_github('mianaz/srtdisk', upgrade = FALSE, dependencies = TRUE); \
 BiocManager::install('FlowSOM', ask = FALSE, update = FALSE); \
 BiocManager::install('diffcyt', ask = FALSE, update = FALSE)" && \
     rm -rf /root/.cache/R /tmp/*
