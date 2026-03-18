@@ -92,7 +92,7 @@ RUN mkdir -p /home/rstudio/.jupyter \
     && chown -R rstudio:rstudio /home/rstudio/.jupyter
 
 # -----------------------------------------------------------------------------
-# 1b: Shiny 扩展 R 包 (shiny 已安装)
+# 1b: Shiny 扩展 R 包 (shiny 已安装)及Shiny
 # -----------------------------------------------------------------------------
 RUN Rscript -e "options(repos = c(CRAN = Sys.getenv('CRAN_URL'))); install.packages(c('shinydashboard', 'shinythemes', 'shinyjs', 'shinyWidgets'), Ncpus = 4)" \
     && rm -rf /root/.cache/R /tmp/*
