@@ -97,7 +97,7 @@ services:
     # 数据卷挂载
     # -------------------------------------------------------------------------
     volumes:
-      - .entrypoint.sh:/usr/local/bin/entrypoint.sh:ro
+      - ./entrypoint.sh:/usr/local/bin/entrypoint.sh:ro
       # 数据目录
       - ${DATA_PATH:-./data}:/data:rw
       # 临时目录 (不能放在容器内，污染环境且性能较差)
