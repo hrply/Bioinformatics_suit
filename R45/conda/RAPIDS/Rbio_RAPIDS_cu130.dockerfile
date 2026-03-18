@@ -125,6 +125,7 @@ RUN pip install --no-cache-dir \
 ENV RMM_ALLOCATOR=managed
 ENV PYTHONIOENCODING=utf-8
 ENV PATH=/root/.local/bin:$PATH
+ENV PIP_CONSTRAINT=
 WORKDIR /data
 
 RUN rm -rf /tmp/* /var/tmp/* /root/.cache/pip /var/lib/apt/lists/*
