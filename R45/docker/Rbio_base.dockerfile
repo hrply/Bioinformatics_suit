@@ -2,15 +2,17 @@
 # Stage 1: Rbio_base - 多阶段构建
 # Base: rocker/geospatial:4.5.2 (R 4.5.2 with geospatial dependencies pre-installed)
 # Purpose: 安装基础R包和Bioconductor包，分层构建生成多个中间镜像
+# 
+# 镜像命名: r-bio:base-1, r-bio:base-2, r-bio:base-3, r-bio:base-4, r-bio:base
 # =============================================================================
 
 # syntax=docker/dockerfile:1
 
 # -----------------------------------------------------------------------------
-# Stage 1a: 系统依赖 + R包管理器
-# 生成镜像: r-bio:base-sys
+# Stage 1-1: 系统依赖 + R包管理器
+# 生成镜像: r-bio:base-1
 # -----------------------------------------------------------------------------
-FROM docker.io/rocker/geospatial:4.5.2 AS base-sys
+FROM docker.io/rocker/geospatial:4.5.2 AS base-1
 
 # Build Arguments
 ARG mirror=default
@@ -62,7 +64,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     zlib1g-dev libhdf5-dev libglpk-dev libgit2-dev \
     libfftw3-dev libgdal-dev libgeos-dev libproj-dev \
     libpng-dev libjpeg-dev libtiff-dev libfreetype6-dev \
-    libgmp-dev libmpfr-dev libgfortran5 \
+    libgmp-dev libmpfr-dev libgfortran5 openjdk-21-jdk-headless \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # 验证 R 版本
@@ -91,10 +93,10 @@ RUN if [ -n "${GITHUB_PROXY}" ]; then \
     rm -rf /root/.cache/R /tmp/*
 
 # -----------------------------------------------------------------------------
-# Stage 1b: CRAN核心包
-# 生成镜像: r-bio:base-cran
+# Stage 1-2: CRAN核心包
+# 生成镜像: r-bio:base-2
 # -----------------------------------------------------------------------------
-FROM base-sys AS base-cran
+FROM base-1 AS base-2
 
 # 重新声明 ARG（多阶段构建需要）
 ARG CRAN_URL
@@ -108,7 +110,7 @@ RUN Rscript -e "\
 options(repos = c(CRAN = Sys.getenv('CRAN_URL'), Bioconductor = Sys.getenv('BIOC_URL'))); \
 pak::pkg_install(c( \
     # 数据处理 (tidyverse核心已由基础镜像预装)
-    'data.table', 'reshape2', 'plyr', 'tidymodels', \
+    'data.table', 'reshape2', 'tidyr', 'dplyr', 'tidymodels', \
     # 可视化 (ggplot2, RColorBrewer已由基础镜像预装)
     'cowplot', 'patchwork', 'ggridges', 'ggrepel', \
     'gridExtra', 'gtable', 'viridisLite', 'viridis', \
@@ -123,15 +125,14 @@ pak::pkg_install(c( \
     'evaluate', 'highr', 'xfun', 'yaml', \
     'httr', 'httr2', 'curl', 'jsonlite', 'xml2', 'rvest', 'openxlsx', \
     'progress', 'progressr', 'logging', 'futile.logger', 'futile.options', \
-    'lambda.r', 'snow', 'parallelly', 'future', 'future.apply', 'listenv' \
-), upgrade = TRUE)" && \
+    'lambda.r', 'snow', 'parallelly', 'future', 'future.apply', 'listenv'), upgrade = TRUE)" && \
     rm -rf /root/.cache/R /tmp/*
 
 # -----------------------------------------------------------------------------
-# Stage 1c: Bioconductor基础包
-# 生成镜像: r-bio:base-bioc
+# Stage 1-3: Bioconductor基础包
+# 生成镜像: r-bio:base-3
 # -----------------------------------------------------------------------------
-FROM base-cran AS base-bioc
+FROM base-2 AS base-3
 
 # 重新声明 ARG（多阶段构建需要）
 ARG CRAN_URL
@@ -164,10 +165,10 @@ pak::pkg_install(c( \
     rm -rf /root/.cache/R /tmp/*
 
 # -----------------------------------------------------------------------------
-# Stage 1d: 统计和机器学习基础 + Seurat前置依赖
-# 生成镜像: r-bio:base-ml
+# Stage 1-4: 统计和机器学习基础 + Seurat前置依赖
+# 生成镜像: r-bio:base-4
 # -----------------------------------------------------------------------------
-FROM base-bioc AS base-ml
+FROM base-3 AS base-4
 ARG CRAN_URL
 ARG BIOC_URL
 ENV CRAN_URL=${CRAN_URL}
@@ -250,10 +251,10 @@ pak::pkg_install(c( \
 # 现代空间分析使用 sf 和 terra 替代
 
 # -----------------------------------------------------------------------------
-# Stage 1e: 最终镜像 - 用户配置
+# Stage 1-5: 最终镜像 - 用户配置
 # 生成镜像: r-bio:base
 # -----------------------------------------------------------------------------
-FROM base-ml AS base-final
+FROM base-4 AS base-final
 ARG CRAN_URL
 ARG BIOC_URL
 ENV CRAN_URL=${CRAN_URL}

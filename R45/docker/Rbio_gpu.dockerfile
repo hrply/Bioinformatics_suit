@@ -1,12 +1,17 @@
 # =============================================================================
-# Stage 4: Rbio_cuda
-# Base: r-bio:cpu
-# Purpose: 安装 CUDA 13.0 和 GPU 加速包
+# Stage 3: Rbio_RAPIDS (GPU version)
+# Base: r-bio:R
+# Purpose: 安装 CUDA 13.0 + RAPIDS + GPU 加速包
+# 使用方法:
+#   docker build -f Rbio_gpu.dockerfile -t rbio:gpubase .
 # =============================================================================
 
 # syntax=docker/dockerfile:1
 
-FROM r-bio:cpu
+FROM r-bio:R
+
+# 确保以 root 用户运行，避免权限问题
+USER root
 
 # -----------------------------------------------------------------------------
 # Build Arguments
@@ -22,14 +27,18 @@ ARG PIP_TRUSTED_HOST
 # -----------------------------------------------------------------------------
 # Environment Variables
 # -----------------------------------------------------------------------------
+ENV TZ="Etc/UTC"
 ENV http_proxy=${http_proxy:-}
 ENV https_proxy=${https_proxy:-}
 ENV GITHUB_PROXY=${github_proxy:-}
 ENV GITHUB_TOKEN=${GITHUB_TOKEN:-}
 ENV PIP_INDEX_URL=${PIP_INDEX_URL:-}
 ENV PIP_TRUSTED_HOST=${PIP_TRUSTED_HOST:-}
-ENV NVIDIA_VISIBLE_DEVICES=all
 ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
+# NVIDIA PyPI 源，用于 RAPIDS 底层 C++ 依赖
+ENV PIP_EXTRA_INDEX_URL=https://pypi.nvidia.com
+ENV CPLUS_INCLUDE_PATH=/usr/include/gdal
+ENV C_INCLUDE_PATH=/usr/include/gdal
 
 # -----------------------------------------------------------------------------
 # Stage 4a: CUDA 仓库设置
@@ -50,12 +59,15 @@ RUN wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     cuda-toolkit-13-0 \
-    && rm -rf /var/lib/apt/lists/*
+    locales && \
+    locale-gen en_US.UTF-8
 
 # 设置 CUDA 环境变量
 ENV CUDA_HOME=/usr/local/cuda
-ENV PATH=${CUDA_HOME}/bin:${PATH}
-ENV LD_LIBRARY_PATH=${CUDA_HOME}/lib64
+ENV PATH=${CUDA_HOME}/bin:${PATH:-}
+ENV LANG=en_US.UTF-8
+ENV LC_ALL=en_US.UTF-8
+ENV LANGUAGE=en_US.UTF-8
 
 # 创建符号链接
 RUN ln -s /usr/local/cuda-13.0 /usr/local/cuda
@@ -74,49 +86,64 @@ RUN apt-get update && \
     && rm -rf /var/lib/apt/lists/*
 
 # -----------------------------------------------------------------------------
-# Stage 4d: PyTorch with CUDA 13.0 (cu130)
-# Note: PyTorch 2.10.0 only supports cu130, not cu131
-# Install first, scvi-tools/cellbender will use existing torch
+# Stage 4d: 版本约束 + pip 升级 + 预降级冲突包
+# -----------------------------------------------------------------------------
+# 创建版本约束文件，避免 RAPIDS 依赖冲突
+RUN echo "bokeh<=3.6.3" > /tmp/constraints.txt && \
+    echo "holoviews<1.21.0" >> /tmp/constraints.txt && \
+    echo "scikit-image<0.26.0,>=0.25.0" >> /tmp/constraints.txt && \
+    echo "cupy-cuda13x>=13.6.0" >> /tmp/constraints.txt && \
+    echo "shapely<2.1.0" >> /tmp/constraints.txt && \
+    echo "nvidia-nvimgcodec-cu13<0.8.0,>=0.7.0" >> /tmp/constraints.txt
+ENV PIP_CONSTRAINT=/tmp/constraints.txt
+
+# 升级 pip 工具链
+RUN . /opt/venv/bin/activate && \
+    pip install --no-cache-dir --upgrade setuptools pip wheel
+
+# 预降级冲突包，为后续依赖提供干净环境
+RUN . /opt/venv/bin/activate && \
+    pip install --no-cache-dir \
+    "bokeh<=3.6.3" \
+    "holoviews<1.21.0" \
+    "scikit-image<0.26.0,>=0.25.0" \
+    "shapely<2.1.0" \
+    "nvidia-nvimgcodec-cu13<0.8.0,>=0.7.0"
+
+# -----------------------------------------------------------------------------
+# Stage 4e: PyTorch with CUDA 13.0 (cu130)
+# Note: 使用 --extra-index-url 而非 --index-url，避免覆盖国内源和 NVIDIA 源
 # -----------------------------------------------------------------------------
 RUN . /opt/venv/bin/activate && \
     pip install --no-cache-dir \
-    torch torchvision --index-url https://download.pytorch.org/whl/cu130
+    torch torchvision torchaudio \
+    --extra-index-url https://download.pytorch.org/whl/cu130
 
 # -----------------------------------------------------------------------------
-# Stage 4e: JAX with CUDA 13
+# Stage 4f: JAX with CUDA 13
 # -----------------------------------------------------------------------------
 RUN . /opt/venv/bin/activate && \
     pip install --no-cache-dir "jax[cuda13]"
 
 # -----------------------------------------------------------------------------
-# Stage 4f: TensorFlow GPU
+# Stage 4g: TensorFlow GPU
 # -----------------------------------------------------------------------------
-RUN . /opt/venv/bin/activate && \
-    pip install --no-cache-dir tensorflow
+# TensorFlow is deprecated
 
 # -----------------------------------------------------------------------------
-# Stage 4g: CuPy for CUDA 13
+# Stage 4h: CuPy for CUDA 13
 # -----------------------------------------------------------------------------
 RUN . /opt/venv/bin/activate && \
     pip install --no-cache-dir cupy-cuda13x
 
 # -----------------------------------------------------------------------------
-# Stage 4h: GPU 加速单细胞包 (在 RAPIDS 之前安装)
-# Note: 此时 torch 已安装，scvi-tools/cellbender 不会触发降级 cuda-bindings
-# -----------------------------------------------------------------------------
-RUN . /opt/venv/bin/activate && \
-    pip install --no-cache-dir \
-    scvi-tools \
-    cellbender
-
-# -----------------------------------------------------------------------------
 # Stage 4i: CUDA Python bindings (升级前为 RAPIDS 准备)
-# Upgrade cuda-bindings to 13.1.1 for RAPIDS compatibility
+# Upgrade cuda-bindings to 13.0.3 for RAPIDS compatibility
 # -----------------------------------------------------------------------------
 RUN . /opt/venv/bin/activate && \
     pip install --no-cache-dir \
-    cuda-python==13.1.1 \
-    cuda-bindings==13.1.1
+    cuda-python==13.0.3 \
+    cuda-bindings==13.0.3
 
 # -----------------------------------------------------------------------------
 # Stage 4j: RAPIDS for CUDA 13
@@ -129,20 +156,51 @@ RUN . /opt/venv/bin/activate && \
     rapids
 
 # -----------------------------------------------------------------------------
-# Stage 4k: rapids-singlecell (在 RAPIDS 之后安装)
+# Stage 4k: rapids-singlecell + PyTorch Geometric
 # -----------------------------------------------------------------------------
 RUN . /opt/venv/bin/activate && \
-    pip install --no-cache-dir rapids-singlecell
+    pip install --no-cache-dir \
+    rapids-singlecell \
+    torch-geometric
 
 # -----------------------------------------------------------------------------
-# Stage 4l: PyTorch Geometric
+# Stage 4l: 补充生信业务包
+# Note: 包含已有包的版本约束，让 pip 进行全局版本校验，防止隐式降级
 # -----------------------------------------------------------------------------
 RUN . /opt/venv/bin/activate && \
-    pip install --no-cache-dir torch-geometric
+    pip install --no-cache-dir \
+    "scanpy>=1.12" \
+    "anndata>=0.10" \
+    scipy pandas numpy matplotlib seaborn \
+    h5py tables zarr pyarrow scrublet \
+    adjustText joblib pydot python-igraph \
+    leidenalg louvain umap-learn phate \
+    "scvi-tools>=1.2.0" \
+    cellbender cell2location \
+    muon flowio FlowKit \
+    PyCytoData PhenoGraph \
+    harmonypy bbknn scirpy pertpy cellrank liana \
+    snapatac2 ktplotspy cellphonedb \
+    scvelo squidpy gseapy decoupler \
+    rpy2 anndata2ri \
+    pydeseq2 pybiomart diffxpy \
+    statsmodels statannotations pingouin \
+    pynndescent scikit-network scikit-learn \
+    scikit-misc scikit-survival \
+    google-generativeai python-dotenv \
+    ipykernel ipywidgets jupyterlab \
+    nbformat nbconvert
 
-# 清理临时文件
-RUN rm -rf /tmp/* /var/tmp/* /root/.cache/pip
+# -----------------------------------------------------------------------------
+# Stage 4m: 环境变量 + 清理
+# -----------------------------------------------------------------------------
+ENV RMM_ALLOCATOR=managed
+ENV PYTHONIOENCODING=utf-8
+ENV PIP_CONSTRAINT=
 
 WORKDIR /home/rstudio
+
+# 清理临时文件
+RUN rm -rf /tmp/* /var/tmp/* /root/.cache/pip /var/lib/apt/lists/*
 
 CMD ["R"]

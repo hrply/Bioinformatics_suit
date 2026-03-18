@@ -1,0 +1,83 @@
+services:
+  rbio-gpu:
+    # 使用 build 模式确保 init_check.sh 被正确编入
+    #build:
+      #context: .
+      #dockerfile: Rbio_RAPIDS.dockerfile
+    image: rbio-gpu:cu130
+    #image: rbio-gpu:cu128
+    container_name: rbio
+    
+    # 1. 显卡调度 (全量开启)
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    
+    # 2. 内存与性能调优
+    shm_size: ${SHM_SIZE:-16g}  # 可通过环境变量调整共享内存大小
+    ulimits:
+      memlock: -1      # 允许锁定内存，RAPIDS 必需
+      stack: 67108864  # 栈空间优化
+    
+    # 3. 环境变量 (包含 AI Key 与 显存管理)
+    env_file:
+      - .env
+    environment:
+      - OPEN_API_KEY=${API_KEY}
+      - PYTHONIOENCODING=utf-8
+      - PIP_USER=1 #后续添加新包将自动安装至持久化容器卷内避免丢失
+      # 缓存与临时文件强制限定至独立临时文件目录内
+      - TMPDIR=/tmp
+      - DASK_TEMPORARY_DIRECTORY=/tmp/dask_spill
+      - JOBLIB_TEMP_FOLDER=/tmp/joblib_cache
+      - NUMBA_CACHE_DIR=/tmp/numba_cache
+      - CUPY_CACHE_DIR=/tmp/cupy_cache
+      # 根据实际配置限制 CPU 线程，防止多核互相抢占
+      - OMP_NUM_THREADS=16 
+      - OPENBLAS_NUM_THREADS=16
+    
+    # 4. 交互支持
+    stdin_open: true
+    tty: true
+    #security_opt:
+    #  - no-new-privileges:true
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "3"
+
+    # 5. 网络
+    networks:
+      - rbio-gpu
+    #ports:
+    #  - "8888:8888"
+
+    # 6. 数据与配置持久化
+    volumes:
+      - ${DATA_PATH:-/home/$USER/data}:/data:rw #数据路径，必须挂载到外部，且读写权限
+      - ${TEMP_PATH:-/tmp/rapids}:/tmp:rw #不能把tmp放在容器内，污染环境，且性能较差
+      - python_local:/root/.local
+      - python_config:/root/.config
+      - python_cache:/root/.cache
+      - ${ENTRYPOINT:-./entrypoint.sh}:/usr/local/bin/entrypoint.sh:ro
+    
+    # 7. 启动设置
+    entrypoint: ["/usr/local/bin/entrypoint.sh"]
+    command: /bin/bash
+    restart: unless-stopped
+
+networks:
+  rbio-gpu:
+    driver: bridge
+volumes:
+  python_local:
+    driver: local
+  python_config:
+    driver: local
+  python_cache:
+    driver: local

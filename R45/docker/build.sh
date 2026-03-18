@@ -1,12 +1,16 @@
 #!/bin/bash
 # =============================================================================
 # Rbio Docker 交互式构建脚本
-# Usage: bash docker_build.sh [options]
+# Usage: bash build.sh [options]
 # Options:
-#   --stage N     从指定阶段开始构建 (1=base, 2=cpu, 3=gpu, 4=final)
-#   --gpu         构建 GPU 版本 (包含 CUDA)
+#   --stage N     从指定阶段开始构建 (1=base, 2=R, 3=cpubase/gpubase, 4=final)
+#   --gpu         构建 GPU 版本 (包含 CUDA和RAPIDS)
 #   --final       构建最终镜像 (Jupyter Lab + RStudio)
 #   --from-scratch 从头开始构建（清理旧镜像）
+#
+# 构建流程:
+#   CPU: base → R → CPU_base → final
+#   GPU: base → R → GPU_base → final
 # =============================================================================
 
 set -e
@@ -26,7 +30,7 @@ mkdir -p "${LOG_DIR}" "${BACKUP_DIR}"
 # =============================================================================
 setup_github_token() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] 设置 GitHub Token..."
-    
+
     # 优先级：环境变量 GITHUB_TOKEN > 环境变量 GITHUB_PAT > .github_token 文件
     if [ -n "$GITHUB_TOKEN" ]; then
         echo "从环境变量 GITHUB_TOKEN 读取"
@@ -43,14 +47,14 @@ setup_github_token() {
         echo "  方式2: echo 'your_token' > .github_token"
         GITHUB_TOKEN=""
     fi
-    
+
     export GITHUB_TOKEN
     export GITHUB_PAT="$GITHUB_TOKEN"
-    
+
     if [ -n "$GITHUB_TOKEN" ]; then
         echo "GitHub Token 已设置，长度: ${#GITHUB_TOKEN}"
     fi
-    
+
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] GitHub Token 设置完成"
 }
 
@@ -109,31 +113,29 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         -h|--help)
-            echo "Usage: bash docker_build.sh [options]"
+            echo "Usage: bash build.sh [options]"
             echo ""
             echo "Options:"
-            echo "  --stage N       从指定阶段开始构建"
-            echo "                  1=base, 2=cpu, 3=gpu, 4=final"
-            echo "  --gpu           构建 GPU 版本 (包含 CUDA)"
-            echo "  --final         构建最终镜像 (Jupyter Lab + RStudio)"
+            echo "  --stage N       从指定阶段开始构建 (1=base, 2=R, 3=cpu/gpu, 4=final)"
+            echo "  --gpu           构建 GPU 版本"
+            echo "  --final         构建到最终镜像"
             echo "  --from-scratch  从头开始构建（清理旧镜像）"
             echo "  --mirror        镜像源 (china/default)"
-            echo "  --http-proxy    HTTP 代理地址 (影响整个构建)"
+            echo "  --http-proxy    HTTP 代理地址"
             echo "  --https-proxy   HTTPS 代理地址"
-            echo "  --github-proxy  GitHub 代理地址 (仅用于 GitHub 下载)"
-            echo "  -y, --no-interactive  跳过交互提示，使用默认值"
+            echo "  --github-proxy  GitHub 代理地址"
+            echo "  -y, --no-interactive  跳过交互提示"
             echo ""
-            echo "构建顺序:"
-            echo "  Stage 1: Rbio_base.dockerfile    → r-bio:base"
-            echo "  Stage 2: Rbio_cpu.dockerfile     → r-bio:cpu"
-            echo "  Stage 3: Rbio_cuda.dockerfile    → r-bio:gpu"
-            echo "  Stage 4: Rbio_final.dockerfile   → r-bio:cpu-final / r-bio:gpu-final"
+            echo "构建流程:"
+            echo "  CPU: base → R → cpu → final"
+            echo "  GPU: base → R → gpu → final"
             echo ""
-            echo "中间镜像 (用于恢复构建):"
-            echo "  Stage 1: r-bio:base-sys, base-cran, base-bioc, base-ml"
-            echo "  Stage 2: r-bio:cpu-python, cpu-annotation, cpu-core, cpu-giotto,"
-            echo "           cpu-scripts, cpu-cran, cpu-bioc, cpu-spatial-deps,"
-            echo "           cpu-cellchat, cpu-trajectory"
+            echo "示例:"
+            echo "  --stage 1 --final --gpu    从stage 1构建到最终GPU镜像"
+            echo "  --stage 1 --final          从stage 1构建到最终CPU镜像"
+            echo "  --stage 3                  只构建stage 3 (CPU版本)"
+            echo "  --stage 3 --gpu            只构建stage 3 (GPU版本)"
+            echo "  --stage 3 --final --gpu    从stage 3构建到最终GPU镜像"
             exit 0
             ;;
         *)
@@ -185,26 +187,31 @@ if [[ "${STAGE}" == "1" && "${NO_INTERACTIVE}" == "false" && -z "$1" ]]; then
     echo "========================================"
     echo "  选择构建阶段"
     echo "========================================"
-    echo "1) 完整构建 (base → cpu → gpu → final)"
-    echo "2) 从 cpu 阶段开始"
-    echo "3) 仅构建 gpu 阶段"
-    echo "4) 仅构建 final 阶段"
-    read -p "请选择 [1/2/3/4] (默认: 1): " stage_choice
+    echo "1) 完整构建 CPU 版本 (base → R → CPU → final)"
+    echo "2) 完整构建 GPU 版本 (base → R → RAPIDS → final)"
+    echo "3) 从 R 阶段开始"
+    echo "4) 仅构建 CPU/GPU 阶段"
+    echo "5) 仅构建 final 阶段"
+    read -p "请选择 [1/2/3/4/5] (默认: 1): " stage_choice
     case "${stage_choice}" in
         2)
-            STAGE=2
+            STAGE=1
+            BUILD_GPU=true
+            BUILD_FINAL=true
             ;;
         3)
-            STAGE=3
-            BUILD_GPU=true
+            STAGE=2
             ;;
         4)
+            STAGE=3
+            ;;
+        5)
             STAGE=4
             BUILD_FINAL=true
             ;;
         *)
             STAGE=1
-            BUILD_GPU=true
+            BUILD_GPU=false
             BUILD_FINAL=true
             ;;
     esac
@@ -220,7 +227,7 @@ if [[ "${STAGE}" -lt 3 && "${BUILD_GPU}" == "false" && "${NO_INTERACTIVE}" == "f
 fi
 
 # Final 确认（仅在交互模式下提示）
-if [[ "${BUILD_GPU}" == "true" && "${BUILD_FINAL}" == "false" && -z "$1" ]]; then
+if [[ "${BUILD_FINAL}" == "false" && -z "$1" && "${NO_INTERACTIVE}" == "false" ]]; then
     echo ""
     read -p "是否构建最终镜像 (Jupyter Lab + RStudio)? [Y/n]: " final_choice
     if [[ ! "${final_choice}" =~ ^[Nn]$ ]]; then
@@ -242,15 +249,15 @@ echo "构建 Final: ${BUILD_FINAL}"
 echo "日志目录: ${LOG_DIR}"
 echo "========================================"
 
-# 仅在完全交互模式下要求确认
-if [[ -z "$1" ]]; then
+# 检查是否跳过交互确认
+if [[ "${NO_INTERACTIVE}" == "true" ]]; then
+    echo "非交互模式，自动确认..."
+else
     read -p "确认开始构建? [Y/n]: " confirm
     if [[ "${confirm}" =~ ^[Nn]$ ]]; then
         echo "构建已取消"
         exit 0
     fi
-else
-    echo "命令行参数已指定，自动确认..."
 fi
 
 # =============================================================================
@@ -260,10 +267,10 @@ fi
 # 通用构建参数生成函数
 generate_build_args() {
     local args=""
-    
+
     # 镜像源参数
     args="--build-arg mirror=${MIRROR}"
-    
+
     # 镜像源 URL（根据 mirror 参数设置）
     if [[ "${MIRROR}" == "china" ]]; then
         args="${args} --build-arg CRAN_URL=https://mirrors.tuna.tsinghua.edu.cn/CRAN"
@@ -272,23 +279,23 @@ generate_build_args() {
         args="${args} --build-arg PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple"
         args="${args} --build-arg PIP_TRUSTED_HOST=pypi.tuna.tsinghua.edu.cn"
     fi
-    
+
     # GitHub Token
     if [[ -n "${GITHUB_TOKEN}" ]]; then
         args="${args} --build-arg GITHUB_TOKEN=${GITHUB_TOKEN}"
     fi
-    
+
     # 全局代理（影响所有网络请求）
     if [[ -n "${HTTP_PROXY}" ]]; then
         args="${args} --build-arg http_proxy=${HTTP_PROXY}"
         args="${args} --build-arg https_proxy=${HTTPS_PROXY:-${HTTP_PROXY}}"
     fi
-    
+
     # GitHub 专用代理（只用于 GitHub 下载）
     if [[ -n "${GITHUB_PROXY}" ]]; then
         args="${args} --build-arg github_proxy=${GITHUB_PROXY}"
     fi
-    
+
     echo "${args}"
 }
 
@@ -298,24 +305,24 @@ build_base() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] 开始构建 Stage 1: r-bio:base (多阶段)"
     local logfile="${LOG_DIR}/Rbio_base_${TIMESTAMP}.log"
     local build_args=$(generate_build_args)
-    
+
     echo "日志文件: ${logfile}"
     echo "构建参数: ${build_args}"
-    
+
     # 定义阶段列表 (target name, 镜像名称)
     local stages=(
-        "base-sys:r-bio:base-sys"
-        "base-cran:r-bio:base-cran"
-        "base-bioc:r-bio:base-bioc"
-        "base-ml:r-bio:base-ml"
+        "base-1:r-bio:base-1"
+        "base-2:r-bio:base-2"
+        "base-3:r-bio:base-3"
+        "base-4:r-bio:base-4"
         "base-final:r-bio:base"
     )
-    
+
     for stage_info in "${stages[@]}"; do
         IFS=':' read -r target image_name <<< "${stage_info}"
         echo ""
         echo "构建 ${target}..."
-        
+
         if ! docker build -f "${SCRIPT_DIR}/Rbio_base.dockerfile" \
             --target "${target}" \
             -t "${image_name}" \
@@ -326,7 +333,7 @@ build_base() {
         fi
         echo "[OK] ${image_name} 构建成功"
     done
-    
+
     echo ""
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] Stage 1: 所有子阶段构建成功"
     echo ""
@@ -335,43 +342,47 @@ build_base() {
     return 0
 }
 
-# Stage 2: CPU 构建
-build_cpu() {
+# Stage 2: R 构建 (R 包安装)
+build_R() {
     echo ""
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] 开始构建 Stage 2: r-bio:cpu (多阶段)"
-    local logfile="${LOG_DIR}/Rbio_cpu_${TIMESTAMP}.log"
-    
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] 开始构建 Stage 2: r-bio:R (多阶段)"
+    local logfile="${LOG_DIR}/Rbio_R_${TIMESTAMP}.log"
+
     # 检查依赖镜像是否存在
     if ! docker images | grep -q "r-bio.*base"; then
         echo "ERROR: 依赖镜像 r-bio:base 不存在"
         return 1
     fi
-    
+
     local build_args=$(generate_build_args)
     echo "日志文件: ${logfile}"
     echo "构建参数: ${build_args}"
-    
+
     # 定义阶段列表 (target name, 镜像名称)
     local stages=(
-        "cpu-python:r-bio:cpu-python"
-        "cpu-annotation:r-bio:cpu-annotation"
-        "cpu-core:r-bio:cpu-core"
-        "cpu-giotto:r-bio:cpu-giotto"
-        "cpu-scripts:r-bio:cpu-scripts"
-        "cpu-cran:r-bio:cpu-cran"
-        "cpu-bioc:r-bio:cpu-bioc"
-        "cpu-spatial-deps:r-bio:cpu-spatial-deps"
-        "cpu-cellchat:r-bio:cpu-cellchat"
-        "cpu-trajectory:r-bio:cpu-trajectory"
-        "cpu-final:r-bio:cpu"
+        "R-1:r-bio:R-1"
+        "R-2:r-bio:R-2"
+        "R-3:r-bio:R-3"
+        "R-4:r-bio:R-4"
+        "R-5:r-bio:R-5"
+        "R-6:r-bio:R-6"
+        "R-7:r-bio:R-7"
+        "R-8:r-bio:R-8"
+        "R-9:r-bio:R-9"
+        "R-10:r-bio:R-10"
+        "R-11:r-bio:R-11"
+        "R-12:r-bio:R-12"
+        "R-13:r-bio:R-13"
+        "R-14:r-bio:R-14"
+        "R-final:r-bio:R"
     )
-    
+
     for stage_info in "${stages[@]}"; do
         IFS=':' read -r target image_name <<< "${stage_info}"
         echo ""
         echo "构建 ${target}..."
-        
-        if ! docker build -f "${SCRIPT_DIR}/Rbio_cpu.dockerfile" \
+
+        if ! docker build -f "${SCRIPT_DIR}/Rbio_R.dockerfile" \
             --target "${target}" \
             -t "${image_name}" \
             ${build_args} \
@@ -381,41 +392,70 @@ build_cpu() {
         fi
         echo "[OK] ${image_name} 构建成功"
     done
-    
+
     echo ""
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] Stage 2: 所有子阶段构建成功"
     echo ""
     echo "生成的镜像:"
-    docker images | grep "r-bio.*cpu" || true
+    docker images | grep "r-bio" | grep -E "R-|r-bio:R" || true
     return 0
 }
 
-# Stage 3: GPU 构建
-build_gpu() {
+# Stage 3a: CPU 构建 (CPU 版本的 Python ML 包)
+build_cpu() {
     echo ""
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] 开始构建 Stage 3: r-bio:gpu"
-    local logfile="${LOG_DIR}/Rbio_gpu_${TIMESTAMP}.log"
-    
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] 开始构建 Stage 3a: rbio:cpubase"
+    local logfile="${LOG_DIR}/Rbio_CPU_${TIMESTAMP}.log"
+
     # 检查依赖镜像是否存在
-    if ! docker images | grep -q "r-bio.*cpu"; then
-        echo "ERROR: 依赖镜像 r-bio:cpu 不存在"
+    if ! docker images | grep -q "r-bio.*R"; then
+        echo "ERROR: 依赖镜像 r-bio:R 不存在"
         return 1
     fi
-    
+
     local build_args=$(generate_build_args)
     echo "日志文件: ${logfile}"
     echo "构建参数: ${build_args}"
-    
-    if ! docker build -f "${SCRIPT_DIR}/Rbio_cuda.dockerfile" \
-        -t r-bio:gpu \
+
+    if ! docker build -f "${SCRIPT_DIR}/Rbio_cpu.dockerfile" \
+        -t rbio:cpubase \
         ${build_args} \
         "${SCRIPT_DIR}" 2>&1 | tee "${logfile}"; then
-        echo "ERROR: Stage 3 (gpu) 构建失败"
+        echo "ERROR: Stage 3a (cpu) 构建失败"
         return 1
     fi
-    
+
     echo ""
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Stage 3: r-bio:gpu 构建成功"
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Stage 3a: rbio:cpubase 构建成功"
+    return 0
+}
+
+# Stage 3b: GPU 构建
+build_gpu() {
+    echo ""
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] 开始构建 Stage 3b: rbio:gpubase"
+    local logfile="${LOG_DIR}/Rbio_gpu_${TIMESTAMP}.log"
+
+    # 检查依赖镜像是否存在
+    if ! docker images | grep -q "r-bio.*R"; then
+        echo "ERROR: 依赖镜像 r-bio:R 不存在"
+        return 1
+    fi
+
+    local build_args=$(generate_build_args)
+    echo "日志文件: ${logfile}"
+    echo "构建参数: ${build_args}"
+
+    if ! docker build -f "${SCRIPT_DIR}/Rbio_gpu.dockerfile" \
+        -t rbio:gpubase \
+        ${build_args} \
+        "${SCRIPT_DIR}" 2>&1 | tee "${logfile}"; then
+        echo "ERROR: Stage 3b (gpu) 构建失败"
+        return 1
+    fi
+
+    echo ""
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Stage 3b: rbio:gpubase 构建成功"
     return 0
 }
 
@@ -425,45 +465,50 @@ build_final() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] 开始构建 Stage 4: 最终镜像"
     local logfile="${LOG_DIR}/Rbio_final_${TIMESTAMP}.log"
     local build_args=$(generate_build_args)
-    
+
     echo "日志文件: ${logfile}"
     echo "构建参数: ${build_args}"
-    
-    # 构建 CPU Final
-    if docker images | grep -q "r-bio.*cpu" && ! docker images | grep -q "r-bio:cpu-final"; then
-        echo ""
-        echo "构建 cpu-final (基于 r-bio:cpu)..."
-        if ! docker build -f "${SCRIPT_DIR}/Rbio_final.dockerfile" \
-            --target cpu-final \
-            -t r-bio:cpu-final \
-            ${build_args} \
-            "${SCRIPT_DIR}" 2>&1 | tee -a "${logfile}"; then
-            echo "ERROR: cpu-final 构建失败"
+
+    # 根据 BUILD_GPU 选择构建 CPU 或 GPU 最终镜像
+    if [[ "${BUILD_GPU}" == "true" ]]; then
+        if ! docker images | grep -q "rbio:gpubase"; then
+            echo "ERROR: 依赖镜像 rbio:gpubase 不存在"
             return 1
         fi
-        echo "[OK] r-bio:cpu-final 构建成功"
-    fi
-    
-    # 构建 GPU Final
-    if docker images | grep -q "r-bio.*gpu" && ! docker images | grep -q "r-bio:gpu-final"; then
         echo ""
-        echo "构建 gpu-final (基于 r-bio:gpu)..."
+        echo "构建 rbio:gpu (基于 rbio:gpubase)..."
         if ! docker build -f "${SCRIPT_DIR}/Rbio_final.dockerfile" \
-            --target gpu-final \
-            -t r-bio:gpu-final \
+            --target gpu \
+            -t rbio:gpu \
             ${build_args} \
             "${SCRIPT_DIR}" 2>&1 | tee -a "${logfile}"; then
-            echo "ERROR: gpu-final 构建失败"
+            echo "ERROR: rbio:gpu 构建失败"
             return 1
         fi
-        echo "[OK] r-bio:gpu-final 构建成功"
+        echo "[OK] rbio:gpu 构建成功"
+    else
+        if ! docker images | grep -q "rbio:cpubase"; then
+            echo "ERROR: 依赖镜像 rbio:cpubase 不存在"
+            return 1
+        fi
+        echo ""
+        echo "构建 rbio:cpu (基于 rbio:cpubase)..."
+        if ! docker build -f "${SCRIPT_DIR}/Rbio_final.dockerfile" \
+            --target cpu \
+            -t rbio:cpu \
+            ${build_args} \
+            "${SCRIPT_DIR}" 2>&1 | tee -a "${logfile}"; then
+            echo "ERROR: rbio:cpu 构建失败"
+            return 1
+        fi
+        echo "[OK] rbio:cpu 构建成功"
     fi
-    
+
     echo ""
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] Stage 4: 最终镜像构建成功"
     echo ""
     echo "生成的镜像:"
-    docker images | grep "r-bio.*final" || true
+    docker images | grep "rbio" || true
     return 0
 }
 
@@ -493,38 +538,50 @@ echo "配置文件: ${CONFIG_FILE}"
 # 如果需要从头构建，清理旧镜像
 if [[ "${FROM_SCRATCH}" == "true" ]]; then
     echo "清理旧镜像..."
-    docker rmi r-bio:gpu-final r-bio:cpu-final r-bio:gpu r-bio:cpu r-bio:base 2>/dev/null || true
+    docker rmi rbio:gpu rbio:cpu rbio:gpubase rbio:cpubase r-bio:R r-bio:base 2>/dev/null || true
 fi
 
 # 根据阶段开始构建
 BUILD_STATUS=0
 
+# Stage 1
 if [[ "${STAGE}" -le 1 ]]; then
     if ! build_base; then
         BUILD_STATUS=1
         exit 1
     fi
+    [[ "${BUILD_FINAL}" != "true" ]] && exit 0
 fi
 
+# Stage 2
 if [[ "${STAGE}" -le 2 ]]; then
-    if ! build_cpu; then
+    if ! build_R; then
         BUILD_STATUS=1
         exit 1
     fi
+    [[ "${BUILD_FINAL}" != "true" ]] && exit 0
 fi
 
-if [[ "${BUILD_GPU}" == "true" ]] || [[ "${STAGE}" -eq 3 ]]; then
-    if ! build_gpu; then
-        BUILD_STATUS=1
-        exit 1
+# Stage 3
+if [[ "${STAGE}" -le 3 ]]; then
+    if [[ "${BUILD_GPU}" == "true" ]]; then
+        if ! build_gpu; then
+            BUILD_STATUS=1
+            exit 1
+        fi
+    else
+        if ! build_cpu; then
+            BUILD_STATUS=1
+            exit 1
+        fi
     fi
+    [[ "${BUILD_FINAL}" != "true" ]] && exit 0
 fi
 
-if [[ "${BUILD_FINAL}" == "true" ]] || [[ "${STAGE}" -eq 4 ]]; then
-    if ! build_final; then
-        BUILD_STATUS=1
-        exit 1
-    fi
+# Stage 4 (final)
+if ! build_final; then
+    BUILD_STATUS=1
+    exit 1
 fi
 
 echo ""
@@ -533,14 +590,14 @@ echo "[$(date '+%Y-%m-%d %H:%M:%S')] 构建任务完成"
 echo "========================================"
 echo ""
 echo "可用镜像:"
-docker images | grep "r-bio" || true
+docker images | grep -E "r-bio|rbio" || true
 echo ""
 echo "运行示例:"
 echo "  # CPU 版本"
-echo "  docker run -d -p 8787:8787 -p 8888:8888 -v /path/to/data:/data r-bio:cpu-final"
+echo "  docker run -d -p 8787:8787 -p 8888:8888 -v /path/to/data:/data rbio:cpu"
 echo ""
 echo "  # GPU 版本"
-echo "  docker run --gpus all -d -p 8787:8787 -p 8888:8888 -v /path/to/data:/data r-bio:gpu-final"
+echo "  docker run --gpus all -d -p 8787:8787 -p 8888:8888 -v /path/to/data:/data rbio:gpu"
 echo ""
 
 exit ${BUILD_STATUS}

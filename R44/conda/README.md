@@ -57,8 +57,8 @@
 
 ```bash
 # 创建并激活 Conda 环境
-conda create -n rbio2 -c conda-forge r-base=4.4.3 python=3.12 mamba -y
-conda activate rbio2
+conda create -n rbio -c conda-forge r-base=4.4.3 python=3.12 mamba -y
+conda activate rbio
 
 # 执行完整安装
 ./Rbio_install.sh --cpu --china

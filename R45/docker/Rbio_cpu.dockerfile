@@ -1,630 +1,111 @@
 # =============================================================================
-# Stage 2: Rbio_cpu - 多阶段构建
-# Base: r-bio:base
-# Purpose: 生信分析 R 包 + Python 环境
+# Stage 3: Rbio_CPU (CPU-only version)
+# Base: r-bio:R
+# Purpose: 安装 CPU 版本的深度学习框架 + 生信 Python 包（无 GPU 支持）
+# 使用方法:
+#   docker build -f Rbio_cpu.dockerfile -t rbio:cpubase .
 # =============================================================================
 
 # syntax=docker/dockerfile:1
 
-# -----------------------------------------------------------------------------
-# Stage 2a-2c: Python 环境
-# 生成镜像: r-bio:cpu-python
-# -----------------------------------------------------------------------------
-FROM r-bio:base AS cpu-python
+FROM r-bio:R
 
+# 确保以 root 用户运行，避免权限问题
+USER root
+
+# -----------------------------------------------------------------------------
+# Build Arguments
+# 注意：PIP_INDEX_URL 等参数继承自 base 镜像，此处声明以支持 build-arg 传递
+# -----------------------------------------------------------------------------
 ARG http_proxy
 ARG https_proxy
 ARG github_proxy
 ARG GITHUB_TOKEN
-ARG CRAN_URL
-ARG BIOC_URL
 ARG PIP_INDEX_URL
 ARG PIP_TRUSTED_HOST
 
+# -----------------------------------------------------------------------------
+# Environment Variables
+# -----------------------------------------------------------------------------
+ENV TZ="Etc/UTC"
 ENV http_proxy=${http_proxy:-}
 ENV https_proxy=${https_proxy:-}
 ENV GITHUB_PROXY=${github_proxy:-}
 ENV GITHUB_TOKEN=${GITHUB_TOKEN:-}
-# CRAN_URL 和 BIOC_URL 继承自 base 镜像，但如果传入了 build-arg 则覆盖
-ENV CRAN_URL=${CRAN_URL}
-ENV BIOC_URL=${BIOC_URL}
 ENV PIP_INDEX_URL=${PIP_INDEX_URL:-}
 ENV PIP_TRUSTED_HOST=${PIP_TRUSTED_HOST:-}
-
-# Stage 2a: Python 3.12 虚拟环境
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3.12 \
-    python3.12-venv \
-    python3.12-dev \
-    python3-pip \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-# 配置 pip 镜像源 (如果设置了 PIP_INDEX_URL)
-RUN if [ -n "${PIP_INDEX_URL}" ]; then \
-        pip config set global.index-url "${PIP_INDEX_URL}"; \
-        if [ -n "${PIP_TRUSTED_HOST}" ]; then \
-            pip config set global.trusted-host "${PIP_TRUSTED_HOST}"; \
-        fi; \
-    fi
-
-# 创建 Python 虚拟环境
-RUN python3.12 -m venv /opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
-ENV VIRTUAL_ENV=/opt/venv
-
-# Stage 2b: 核心 Python 包
-RUN pip install --no-cache-dir \
-    numpy \
-    scipy \
-    pandas \
-    matplotlib \
-    seaborn \
-    numba \
-    h5py \
-    tables \
-    zarr \
-    pyarrow
-
-# Stage 2c: 单细胞分析 Python 包
-RUN pip install --no-cache-dir \
-    scanpy \
-    anndata \
-    leidenalg \
-    python-igraph \
-    louvain \
-    umap-learn \
-    phate \
-    scvelo \
-    cell2location \
-    squidpy \
-    gseapy \
-    decoupler
+ENV CPLUS_INCLUDE_PATH=/usr/include/gdal
+ENV C_INCLUDE_PATH=/usr/include/gdal
 
 # -----------------------------------------------------------------------------
-# Stage 2d-2e: 注释数据库
-# 生成镜像: r-bio:cpu-annotation
+# Stage 3a: pip 升级
+# Note: CPU 版本不需要版本约束（RAPIDS 的约束仅适用于 GPU 版本）
 # -----------------------------------------------------------------------------
-FROM cpu-python AS cpu-annotation
-
-# 重新声明 ARG（多阶段构建需要）
-ARG mirror=default
-ARG http_proxy
-ARG https_proxy
-ARG github_proxy
-ARG GITHUB_TOKEN
-
-ENV http_proxy=${http_proxy:-}
-ENV https_proxy=${https_proxy:-}
-ENV GITHUB_PROXY=${github_proxy:-}
-ENV GITHUB_TOKEN=${GITHUB_TOKEN:-}
-
-# Stage 2d: 注释数据库 (Bioconductor)
-RUN Rscript -e " \
-options(BioC_mirror = Sys.getenv('BIOC_URL')); \
-if (!requireNamespace('BiocManager', quietly = TRUE)) install.packages('BiocManager'); \
-BiocManager::install(c('AnnotationDbi', 'AnnotationHub', 'org.Hs.eg.db', 'org.Mm.eg.db', \
-    'BSgenome', 'GenomeInfoDbData', 'ensembldb', 'EnsDb.Hsapiens.v86'), ask = FALSE) \
-" && \
-    rm -rf /root/.cache/R /tmp/*
-
-# Stage 2e: 基因组数据库 (BSgenome)
-# 复制本地离线包 (如果存在) - 使用通配符匹配任意版本
-COPY external_files/BSgenome*.tar.gz /tmp/
-
-# 安装基因组数据库
-RUN Rscript -e " \
-options(BioC_mirror = Sys.getenv('BIOC_URL')); \
-if (!requireNamespace('BiocManager', quietly = TRUE)) install.packages('BiocManager'); \
-# 查找本地 BSgenome.Hsapiens.UCSC.hg38 包 \
-hg38_local <- Sys.glob('/tmp/BSgenome.Hsapiens.UCSC.hg38_*.tar.gz'); \
-if (length(hg38_local) > 0) { \
-    message('Installing BSgenome.Hsapiens.UCSC.hg38 from local file: ', hg38_local[1]); \
-    install.packages(hg38_local[1], repos = NULL); \
-} else { \
-    message('Installing BSgenome.Hsapiens.UCSC.hg38 from Bioconductor...'); \
-    BiocManager::install('BSgenome.Hsapiens.UCSC.hg38', ask = FALSE); \
-}; \
-# 查找本地 BSgenome.Mmusculus.UCSC.mm39 包 \
-mm39_local <- Sys.glob('/tmp/BSgenome.Mmusculus.UCSC.mm39_*.tar.gz'); \
-if (length(mm39_local) > 0) { \
-    message('Installing BSgenome.Mmusculus.UCSC.mm39 from local file: ', mm39_local[1]); \
-    install.packages(mm39_local[1], repos = NULL); \
-} else { \
-    message('Installing BSgenome.Mmusculus.UCSC.mm39 from Bioconductor...'); \
-    BiocManager::install('BSgenome.Mmusculus.UCSC.mm39', ask = FALSE); \
-} \
-" && \
-    rm -rf /root/.cache/R /tmp/*
+RUN . /opt/venv/bin/activate && \
+    pip install --no-cache-dir --upgrade setuptools pip wheel
 
 # -----------------------------------------------------------------------------
-# Stage 2f-2j: 核心分析包
-# 生成镜像: r-bio:cpu-core
+# Stage 3b: PyTorch (CPU version)
+# Note: 使用 --index-url 强制只使用 CPU wheel，避免安装 GPU 版本
 # -----------------------------------------------------------------------------
-FROM cpu-annotation AS cpu-core
-
-# 重新声明 ARG
-ARG mirror=default
-ARG http_proxy
-ARG https_proxy
-ARG github_proxy
-ARG GITHUB_TOKEN
-
-ENV http_proxy=${http_proxy:-}
-ENV https_proxy=${https_proxy:-}
-ENV GITHUB_PROXY=${github_proxy:-}
-ENV GITHUB_TOKEN=${GITHUB_TOKEN:-}
-
-# Stage 2f: 分析工具包 (Bioconductor)
-RUN Rscript -e " \
-options(BioC_mirror = Sys.getenv('BIOC_URL')); \
-if (!requireNamespace('BiocManager', quietly = TRUE)) install.packages('BiocManager'); \
-BiocManager::install(c('limma', 'edgeR', 'DESeq2', 'scran', 'scater', \
-    'GSVA', 'GSEABase', 'GEOquery', 'impute', 'preprocessCore'), ask = FALSE) \
-" && \
-    rm -rf /root/.cache/R /tmp/*
-
-# Stage 2g: Seurat v5 (CRAN官方安装)
-RUN Rscript -e " \
-install.packages(c('Seurat', 'SeuratObject'), repos = Sys.getenv('CRAN_URL'), Ncpus = 4) \
-" && \
-    rm -rf /root/.cache/R /tmp/*
-
-# Stage 2h: Seurat 增强包 (GitHub) - 使用代理
-RUN export http_proxy=${GITHUB_PROXY} && export https_proxy=${GITHUB_PROXY} && \
-    Rscript -e " \
-options(download.file.method = 'curl', download.file.extra = paste0('--proxy ', Sys.getenv('GITHUB_PROXY'))); \
-devtools::install_github('immunogenomics/presto') \
-" && \
-    rm -rf /root/.cache/R /tmp/*
-
-# Stage 2i: Signac (Bioconductor官方安装)
-RUN Rscript -e " \
-options(BioC_mirror = Sys.getenv('BIOC_URL')); \
-if (!requireNamespace('BiocManager', quietly = TRUE)) install.packages('BiocManager'); \
-BiocManager::install('Signac', ask = FALSE) \
-" && \
-    rm -rf /root/.cache/R /tmp/*
-
-# Stage 2j: SingleR (Bioconductor官方安装)
-RUN Rscript -e " \
-options(BioC_mirror = Sys.getenv('BIOC_URL')); \
-if (!requireNamespace('BiocManager', quietly = TRUE)) install.packages('BiocManager'); \
-BiocManager::install('SingleR', ask = FALSE) \
-" && \
-    rm -rf /root/.cache/R /tmp/*
+RUN . /opt/venv/bin/activate && \
+    pip install --no-cache-dir \
+    torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
 
 # -----------------------------------------------------------------------------
-# Stage 2k: Giotto (容易失败，单独分层)
-# 生成镜像: r-bio:cpu-giotto
+# Stage 3c: JAX (默认即 CPU 版本)
+# Note: JAX 0.4+ 默认安装即为 CPU 版本，无需指定 [cpu] extra
 # -----------------------------------------------------------------------------
-FROM cpu-core AS cpu-giotto
-
-# 重新声明 ARG
-ARG mirror=default
-ARG http_proxy
-ARG https_proxy
-ARG github_proxy
-ARG GITHUB_TOKEN
-
-ENV http_proxy=${http_proxy:-}
-ENV https_proxy=${https_proxy:-}
-ENV GITHUB_PROXY=${github_proxy:-}
-ENV GITHUB_TOKEN=${GITHUB_TOKEN:-}
-
-# Giotto (GitHub安装 - 避免CRAN网络问题) - 使用代理
-RUN export http_proxy=${GITHUB_PROXY} && export https_proxy=${GITHUB_PROXY} && \
-    Rscript -e " \
-options(download.file.method = 'curl', download.file.extra = paste0('--proxy ', Sys.getenv('GITHUB_PROXY'))); \
-remotes::install_github('drieslab/Giotto'); \
-remotes::install_github('drieslab/GiottoClass') \
-" && \
-    rm -rf /root/.cache/R /tmp/*
+RUN . /opt/venv/bin/activate && \
+    pip install --no-cache-dir jax
 
 # -----------------------------------------------------------------------------
-# Stage 3a: 其他常用R包 + 外部脚本
-# 生成镜像: r-bio:cpu-scripts
+# Stage 3d: TensorFlow CPU
 # -----------------------------------------------------------------------------
-FROM cpu-giotto AS cpu-scripts
-
-# 重新声明 ARG
-ARG mirror=default
-ARG http_proxy
-ARG https_proxy
-ARG github_proxy
-ARG GITHUB_TOKEN
-ARG CRAN_URL
-ARG BIOC_URL
-ARG PIP_INDEX_URL
-ARG PIP_TRUSTED_HOST
-
-ENV http_proxy=${http_proxy:-}
-ENV https_proxy=${https_proxy:-}
-ENV GITHUB_PROXY=${github_proxy:-}
-ENV GITHUB_TOKEN=${GITHUB_TOKEN:-}
-ENV CRAN_URL=${CRAN_URL:-https://cloud.r-project.org}
-ENV BIOC_URL=${BIOC_URL:-https://bioconductor.org}
-ENV PIP_INDEX_URL=${PIP_INDEX_URL:-}
-ENV PIP_TRUSTED_HOST=${PIP_TRUSTED_HOST:-}
-
-# 设置镜像源
-RUN if [ "${mirror}" = "china" ] || [ "${mirror}" = "China" ]; then \
-        echo "options(repos = c(CRAN = 'https://mirrors.tuna.tsinghua.edu.cn/CRAN'))" >> /usr/local/lib/R/etc/Rprofile.site; \
-        export BIOC_MIRROR="https://mirrors.tuna.tsinghua.edu.cn/bioconductor"; \
-    else \
-        echo "options(repos = c(CRAN = 'https://cloud.r-project.org'))" >> /usr/local/lib/R/etc/Rprofile.site; \
-        export BIOC_MIRROR="https://bioconductor.org/packages/release/bioc"; \
-    fi && \
-    echo "options(BioC_mirror = '${BIOC_MIRROR}')" >> /usr/local/lib/R/etc/Rprofile.site
-
-# 复制外部脚本
-COPY external_files/ScType /usr/local/lib/R/site-library/ScType
-COPY external_files/RaceID /usr/local/lib/R/site-library/RaceID
-
-# 创建 ScType.R 入口文件（解决验证脚本路径问题）
-RUN echo '# ScType entry point' > /usr/local/lib/R/site-library/ScType/R/ScType.R && \
-    echo 'source("/usr/local/lib/R/site-library/ScType/R/sctype_wrapper.R")' >> /usr/local/lib/R/site-library/ScType/R/ScType.R
+# TensorFlow is deprecated
 
 # -----------------------------------------------------------------------------
-# Stage 3b: CRAN 包 (ComplexHeatmap 依赖 + 缺失包)
-# 生成镜像: r-bio:cpu-cran
+# Stage 3e: PyTorch Geometric (CPU version)
 # -----------------------------------------------------------------------------
-FROM cpu-scripts AS cpu-cran
-
-# 重新声明 ARG
-ARG mirror=default
-ARG http_proxy
-ARG https_proxy
-ARG github_proxy
-ARG GITHUB_TOKEN
-
-ENV http_proxy=${http_proxy:-}
-ENV https_proxy=${https_proxy:-}
-ENV GITHUB_PROXY=${github_proxy:-}
-ENV GITHUB_TOKEN=${GITHUB_TOKEN:-}
-
-# 安装 ComplexHeatmap 依赖 + 缺失的 CRAN 包
-RUN Rscript -e " \
-options(repos = c(CRAN = Sys.getenv('CRAN_URL'))); \
-install.packages(c('GlobalOptions', 'circlize', 'ggExtra', 'randomForest'), Ncpus = 4) \
-" && \
-    rm -rf /root/.cache/R /tmp/*
+RUN . /opt/venv/bin/activate && \
+    pip install --no-cache-dir torch-geometric
 
 # -----------------------------------------------------------------------------
-# Stage 3c: Bioconductor 基础包
-# 生成镜像: r-bio:cpu-bioc
+# Stage 3f: 生信业务包
+# Note: 包含已有包的版本约束，让 pip 进行全局版本校验，防止隐式降级
 # -----------------------------------------------------------------------------
-FROM cpu-cran AS cpu-bioc
-
-# 重新声明 ARG
-ARG mirror=default
-ARG http_proxy
-ARG https_proxy
-ARG github_proxy
-ARG GITHUB_TOKEN
-
-ENV http_proxy=${http_proxy:-}
-ENV https_proxy=${https_proxy:-}
-ENV GITHUB_PROXY=${github_proxy:-}
-ENV GITHUB_TOKEN=${GITHUB_TOKEN:-}
-
-# 安装 ComplexHeatmap + AUCell (Bioconductor)
-RUN Rscript -e " \
-options(BioC_mirror = Sys.getenv('BIOC_URL')); \
-if (!requireNamespace('BiocManager', quietly = TRUE)) install.packages('BiocManager'); \
-BiocManager::install(c('ComplexHeatmap', 'AUCell'), ask = FALSE, update = FALSE) \
-" && \
-    rm -rf /root/.cache/R /tmp/*
-
-# -----------------------------------------------------------------------------
-# Stage 3d: SpatialCellChat 依赖 (ALRA + MERINGUE)
-# 生成镜像: r-bio:cpu-spatial-deps
-# -----------------------------------------------------------------------------
-FROM cpu-bioc AS cpu-spatial-deps
-
-# 重新声明 ARG
-ARG mirror=default
-ARG http_proxy
-ARG https_proxy
-ARG github_proxy
-ARG GITHUB_TOKEN
-
-ENV http_proxy=${http_proxy:-}
-ENV https_proxy=${https_proxy:-}
-ENV GITHUB_PROXY=${github_proxy:-}
-ENV GITHUB_TOKEN=${GITHUB_TOKEN:-}
-
-# 安装 ALRA + MERINGUE (SpatialCellChat 依赖)
-RUN export http_proxy=${GITHUB_PROXY} && export https_proxy=${GITHUB_PROXY} && \
-    Rscript -e " \
-options(download.file.method = 'curl', download.file.extra = paste0('--proxy ', Sys.getenv('GITHUB_PROXY'))); \
-devtools::install_github('KlugerLab/ALRA'); \
-remotes::install_github('JEFworks-Lab/MERINGUE', build_vignettes = TRUE) \
-" && \
-    rm -rf /root/.cache/R /tmp/*
+RUN . /opt/venv/bin/activate && \
+    pip install --no-cache-dir \
+    "scanpy>=1.12" \
+    "anndata>=0.10" \
+    scipy pandas numpy matplotlib seaborn \
+    h5py tables zarr pyarrow scrublet \
+    adjustText joblib pydot python-igraph \
+    leidenalg louvain umap-learn phate \
+    "scvi-tools>=1.2.0" \
+    cellbender cell2location \
+    muon flowio FlowKit \
+    PyCytoData PhenoGraph \
+    harmonypy bbknn scirpy pertpy cellrank liana \
+    snapatac2 ktplotspy cellphonedb \
+    scvelo squidpy gseapy decoupler \
+    rpy2 anndata2ri \
+    pydeseq2 pybiomart diffxpy \
+    statsmodels statannotations pingouin \
+    pynndescent scikit-network scikit-learn \
+    scikit-misc scikit-survival \
+    google-generativeai python-dotenv \
+    ipykernel ipywidgets jupyterlab \
+    nbformat nbconvert
 
 # -----------------------------------------------------------------------------
-# Stage 3e: 细胞通讯包 (GitHub)
-# 生成镜像: r-bio:cpu-cellchat
+# Stage 3g: 环境变量 + 清理
 # -----------------------------------------------------------------------------
-FROM cpu-spatial-deps AS cpu-cellchat
+ENV PYTHONIOENCODING=utf-8
 
-# 重新声明 ARG
-ARG mirror=default
-ARG http_proxy
-ARG https_proxy
-ARG github_proxy
-ARG GITHUB_TOKEN
+WORKDIR /home/rstudio
 
-ENV http_proxy=${http_proxy:-}
-ENV https_proxy=${https_proxy:-}
-ENV GITHUB_PROXY=${github_proxy:-}
-ENV GITHUB_TOKEN=${GITHUB_TOKEN:-}
+# 清理临时文件
+RUN rm -rf /tmp/* /var/tmp/* /root/.cache/pip /var/lib/apt/lists/*
 
-# CellChat (依赖 ComplexHeatmap)
-RUN export http_proxy=${GITHUB_PROXY} && export https_proxy=${GITHUB_PROXY} && \
-    Rscript -e " \
-options(download.file.method = 'curl', download.file.extra = paste0('--proxy ', Sys.getenv('GITHUB_PROXY'))); \
-remotes::install_github('jinworks/CellChat') \
-" && \
-    rm -rf /root/.cache/R /tmp/*
-
-# celltalker
-RUN export http_proxy=${GITHUB_PROXY} && export https_proxy=${GITHUB_PROXY} && \
-    Rscript -e " \
-options(download.file.method = 'curl', download.file.extra = paste0('--proxy ', Sys.getenv('GITHUB_PROXY'))); \
-remotes::install_github('CilloLaboratory/celltalker') \
-" && \
-    rm -rf /root/.cache/R /tmp/*
-
-# SpatialCellChat (依赖 CellChat + ALRA + MERINGUE)
-RUN export http_proxy=${GITHUB_PROXY} && export https_proxy=${GITHUB_PROXY} && \
-    Rscript -e " \
-options(download.file.method = 'curl', download.file.extra = paste0('--proxy ', Sys.getenv('GITHUB_PROXY'))); \
-remotes::install_github('jinworks/SpatialCellChat') \
-" && \
-    rm -rf /root/.cache/R /tmp/*
-
-# -----------------------------------------------------------------------------
-# Stage 3f: 轨迹分析包 (Bioconductor)
-# 生成镜像: r-bio:cpu-trajectory
-# -----------------------------------------------------------------------------
-FROM cpu-cellchat AS cpu-trajectory
-
-# 重新声明 ARG
-ARG mirror=default
-ARG http_proxy
-ARG https_proxy
-ARG github_proxy
-ARG GITHUB_TOKEN
-
-ENV http_proxy=${http_proxy:-}
-ENV https_proxy=${https_proxy:-}
-ENV GITHUB_PROXY=${github_proxy:-}
-ENV GITHUB_TOKEN=${GITHUB_TOKEN:-}
-
-# 安装轨迹分析包
-RUN Rscript -e " \
-options(BioC_mirror = Sys.getenv('BIOC_URL')); \
-if (!requireNamespace('BiocManager', quietly = TRUE)) install.packages('BiocManager'); \
-BiocManager::install(c('monocle', 'slingshot', 'tradeSeq'), update = FALSE, ask = FALSE) \
-" && \
-    rm -rf /root/.cache/R /tmp/*
-
-# -----------------------------------------------------------------------------
-# Stage 3g: GitHub 包 - MAST, Nebulosa
-# 生成镜像: r-bio:cpu-github
-# -----------------------------------------------------------------------------
-FROM cpu-trajectory AS cpu-github
-
-# 重新声明 ARG
-ARG mirror=default
-ARG http_proxy
-ARG https_proxy
-ARG github_proxy
-ARG GITHUB_TOKEN
-
-ENV http_proxy=${http_proxy:-}
-ENV https_proxy=${https_proxy:-}
-ENV GITHUB_PROXY=${github_proxy:-}
-ENV GITHUB_TOKEN=${GITHUB_TOKEN:-}
-
-# MAST
-RUN export http_proxy=${GITHUB_PROXY} && export https_proxy=${GITHUB_PROXY} && \
-    Rscript -e " \
-options(download.file.method = 'curl', download.file.extra = paste0('--proxy ', Sys.getenv('GITHUB_PROXY'))); \
-remotes::install_github('RGLab/MAST') \
-" && \
-    rm -rf /root/.cache/R /tmp/*
-
-# Nebulosa
-RUN export http_proxy=${GITHUB_PROXY} && export https_proxy=${GITHUB_PROXY} && \
-    Rscript -e " \
-options(download.file.method = 'curl', download.file.extra = paste0('--proxy ', Sys.getenv('GITHUB_PROXY'))); \
-remotes::install_github('powellgenomicslab/Nebulosa') \
-" && \
-    rm -rf /root/.cache/R /tmp/*
-
-# -----------------------------------------------------------------------------
-# Stage 3h: harmony + scDblFinder
-# 生成镜像: r-bio:cpu-advanced
-# -----------------------------------------------------------------------------
-FROM cpu-github AS cpu-advanced
-
-# 重新声明 ARG
-ARG mirror=default
-ARG http_proxy
-ARG https_proxy
-ARG github_proxy
-ARG GITHUB_TOKEN
-
-ENV http_proxy=${http_proxy:-}
-ENV https_proxy=${https_proxy:-}
-ENV GITHUB_PROXY=${github_proxy:-}
-ENV GITHUB_TOKEN=${GITHUB_TOKEN:-}
-
-# harmony (CRAN)
-RUN Rscript -e " \
-options(repos = c(CRAN = Sys.getenv('CRAN_URL'))); \
-install.packages(c('harmony'), Ncpus = 4) \
-" && \
-    rm -rf /root/.cache/R /tmp/*
-
-# scDblFinder (Bioconductor)
-RUN Rscript -e " \
-options(BioC_mirror = Sys.getenv('BIOC_URL')); \
-if (!requireNamespace('BiocManager', quietly = TRUE)) install.packages('BiocManager'); \
-BiocManager::install('scDblFinder', ask = FALSE, update = FALSE) \
-" && \
-    rm -rf /root/.cache/R /tmp/*
-
-# -----------------------------------------------------------------------------
-# Stage 3i: 需要编译的包 (BPCells, monocle3)
-# 生成镜像: r-bio:cpu-compile
-# -----------------------------------------------------------------------------
-FROM cpu-advanced AS cpu-compile
-
-# 重新声明 ARG
-ARG mirror=default
-ARG http_proxy
-ARG https_proxy
-ARG github_proxy
-ARG GITHUB_TOKEN
-
-ENV http_proxy=${http_proxy:-}
-ENV https_proxy=${https_proxy:-}
-ENV GITHUB_PROXY=${github_proxy:-}
-ENV GITHUB_TOKEN=${GITHUB_TOKEN:-}
-
-# 安装 grr (从 CRAN Archive，monocle3 依赖)
-RUN cd /tmp && \
-    curl -o grr_0.9.5.tar.gz https://cran.r-project.org/src/contrib/Archive/grr/grr_0.9.5.tar.gz && \
-    R CMD INSTALL grr_0.9.5.tar.gz && \
-    rm -f grr_0.9.5.tar.gz
-
-# BPCells (需要编译，耗时长)
-RUN export http_proxy=${GITHUB_PROXY} && export https_proxy=${GITHUB_PROXY} && \
-    Rscript -e " \
-options(download.file.method = 'curl', download.file.extra = paste0('--proxy ', Sys.getenv('GITHUB_PROXY'))); \
-remotes::install_github('bnprks/BPCells/r') \
-" && \
-    rm -rf /root/.cache/R /tmp/*
-
-# batchelor (monocle3 依赖)
-RUN Rscript -e " \
-options(BioC_mirror = Sys.getenv('BIOC_URL')); \
-if (!requireNamespace('BiocManager', quietly = TRUE)) install.packages('BiocManager'); \
-BiocManager::install('batchelor', update = FALSE, ask = FALSE) \
-" && \
-    rm -rf /root/.cache/R /tmp/*
-
-# monocle3 (需要代理访问 GitHub)
-RUN echo -e "\033[1;32m[Stage] Installing monocle3\033[0m" && \
-    export http_proxy=${GITHUB_PROXY} && export https_proxy=${GITHUB_PROXY} && \
-    Rscript -e " \
-options(repos = c(cran = Sys.getenv('CRAN_URL')), download.file.method = 'curl', download.file.extra = paste0('--proxy ', Sys.getenv('GITHUB_PROXY'))); \
-options(BioC_mirror = Sys.getenv('BIOC_URL')); \
-if (!requireNamespace('devtools', quietly = TRUE)) install.packages('devtools'); \
-devtools::install_github('cole-trapnell-lab/monocle3', upgrade = 'never') \
-" && \
-    rm -rf /root/.cache/R /tmp/*
-
-# -----------------------------------------------------------------------------
-# Stage 3i: 可选包 (允许失败)
-# 生成镜像: r-bio:cpu-optional
-# -----------------------------------------------------------------------------
-FROM cpu-compile AS cpu-optional
-
-# 重新声明 ARG
-ARG mirror=default
-ARG http_proxy
-ARG https_proxy
-ARG github_proxy
-ARG GITHUB_TOKEN
-
-ENV http_proxy=${http_proxy:-}
-ENV https_proxy=${https_proxy:-}
-ENV GITHUB_PROXY=${github_proxy:-}
-ENV GITHUB_TOKEN=${GITHUB_TOKEN:-}
-
-# scde (Bioconductor 包名是小写)
-RUN Rscript -e " \
-options(BioC_mirror = Sys.getenv('BIOC_URL')); \
-BiocManager::install('scde', ask = FALSE, update = FALSE) \
-" && rm -rf /root/.cache/R /tmp/*
-
-# Rsubread (需要编译) - 允许失败
-RUN (Rscript -e " \
-options(BioC_mirror = Sys.getenv('BIOC_URL')); \
-if (!requireNamespace('BiocManager', quietly = TRUE)) install.packages('BiocManager'); \
-BiocManager::install('Rsubread', ask = FALSE, update = FALSE) \
-" && rm -rf /root/.cache/R /tmp/*) || \
-    echo "[WARNING] Rsubread installation failed, skipping..."
-
-# -----------------------------------------------------------------------------
-# Seurat 扩展包：seurat-disk, seurat-data, seurat-wrappers
-# -----------------------------------------------------------------------------
-RUN export http_proxy=${GITHUB_PROXY} && export https_proxy=${GITHUB_PROXY} && \
-    Rscript -e " \
-options(repos = c(cran = Sys.getenv('CRAN_URL')), download.file.method = 'curl', download.file.extra = paste0('--proxy ', Sys.getenv('GITHUB_PROXY'))); \
-options(BioC_mirror = Sys.getenv('BIOC_URL')); \
-if (!requireNamespace('devtools', quietly = TRUE)) install.packages('devtools'); \
-if (!requireNamespace('remotes', quietly = TRUE)) install.packages('remotes'); \
-remotes::install_github('mojaveazure/seurat-disk', upgrade = TRUE); \
-devtools::install_github('satijalab/seurat-data', upgrade = TRUE); \
-remotes::install_github('satijalab/seurat-wrappers', upgrade = TRUE)" && \
-    rm -rf /root/.cache/R /tmp/*
-
-# -----------------------------------------------------------------------------
-# HDF5 LZF 插件 (Azimuth 依赖) 使用 pip 安装 h5py 替代手动编译
-# -----------------------------------------------------------------------------
-RUN echo -e "\033[1;32m[Stage 2] Installing h5py with LZF support\033[0m" && \
-    . /opt/venv/bin/activate && \
-    pip install --no-cache-dir h5py && \
-    mkdir -p /lzf && \
-    echo "h5py installed, LZF support via h5py"
-
-# -----------------------------------------------------------------------------
-# Azimuth 用于单细胞数据注释和整合
-# -----------------------------------------------------------------------------
-RUN echo -e "\033[1;32m[Stage 3] Installing Azimuth\033[0m" && \
-    Rscript -e "\
-options(repos = c(cran = Sys.getenv('CRAN_URL')), download.file.method = 'curl', download.file.extra = paste0('--proxy ', Sys.getenv('GITHUB_PROXY'))); \
-options(BioC_mirror = Sys.getenv('BIOC_URL')); \
-if (!requireNamespace('devtools', quietly = TRUE)) install.packages('devtools'); \
-devtools::install_github('satijalab/azimuth')" && \
-    rm -rf /root/.cache/R /tmp/*
-
-# -----------------------------------------------------------------------------
-# Stage 3j: 最终镜像
-# 生成镜像: r-bio:cpu
-# -----------------------------------------------------------------------------
-FROM cpu-optional AS cpu-final
-
-# 重新声明 ARG
-ARG mirror=default
-ARG http_proxy
-ARG https_proxy
-ARG github_proxy
-ARG GITHUB_TOKEN
-
-ENV http_proxy=${http_proxy:-}
-ENV https_proxy=${https_proxy:-}
-ENV GITHUB_PROXY=${github_proxy:-}
-ENV GITHUB_TOKEN=${GITHUB_TOKEN:-}
-
-# 配置 reticulate
-RUN Rscript -e " \
-reticulate::use_python('/opt/venv/bin/python', required = TRUE); \
-reticulate::py_config(); \
-"
-
-# 复制验证脚本并执行
-COPY verify_cpu_packages.R /tmp/verify_cpu_packages.R
-RUN Rscript /tmp/verify_cpu_packages.R && rm -f /tmp/verify_cpu_packages.R
-
-# 设置默认工作目录
-WORKDIR /data
-
-# 默认命令
 CMD ["R"]

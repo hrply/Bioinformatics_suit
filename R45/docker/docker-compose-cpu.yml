@@ -13,24 +13,13 @@
 
 services:
   # -------------------------------------------------------------------------
-  # R-bio GPU Final - 单细胞分析环境 (GPU 加速)
+  # R-bio CPU Final - 单细胞分析环境
   # -------------------------------------------------------------------------
-  rbio-gpu:
-    image: rbio:gpu
+  rbio-cpu:
+    image: rbio:cpu
     container_name: rbio
     hostname: rbio
     command: /opt/venv/bin/jupyter lab --config=/home/${RSTUDIO_USER}/.jupyter/jupyter_server_config.py
-
-    # -------------------------------------------------------------------------
-    # GPU 支持 (NVIDIA Container Toolkit 必需)
-    # -------------------------------------------------------------------------
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
 
     # -------------------------------------------------------------------------
     # 内存与性能调优
@@ -77,10 +66,7 @@ services:
       - R_USER_CACHE_DIR=/custom/.cache/r
       - PIP_CACHE_DIR=/custom/.cache/pip
       - TMPDIR=/tmp
-      - DASK_TEMPORARY_DIRECTORY=/tmp/dask_spill
       - JOBLIB_TEMP_FOLDER=/tmp/joblib_cache
-      - NUMBA_CACHE_DIR=/tmp/numba_cache
-      - CUPY_CACHE_DIR=/tmp/cupy_cache
 
       # 线程限制，防止多核互相抢占
       - OMP_NUM_THREADS=${OMP_NUM_THREADS:-16}
@@ -176,16 +162,3 @@ volumes:
     driver: local
   r_local:
     driver: local
-
-# =============================================================================
-# 其他可选服务
-# =============================================================================
-
-# -------------------------------------------------------------------------
-# CPU 版本 (如果没有 GPU)，用下面的替换
-# -------------------------------------------------------------------------
-# rbio-cpu:
-#   image: r-bio:cpu-final
-#   container_name: rbio
-#   hostname: rbio
-#   command: /opt/venv/bin/jupyter lab --config=/home/${RSTUDIO_USER}/.jupyter/jupyter_server_config.py
