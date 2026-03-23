@@ -16,5 +16,11 @@ ARG GITHUB_PROXY=http://192.168.3.147:7890
 RUN Rscript -e " \
     options(repos = c(cran = Sys.getenv('CRAN_URL')), download.file.method = 'curl', download.file.extra = paste0('--proxy ', Sys.getenv('GITHUB_PROXY'))); \
     options(BioC_mirror = Sys.getenv('BIOC_URL')); \
-    remotes::install_github('mianaz/srtdisk', upgrade = FALSE, dependencies = TRUE)" \
-    && rm -rf /root/.cache/R /tmp/*
+    remotes::install_github('mianaz/srtdisk', upgrade = FALSE, dependencies = TRUE)" 
+
+RUN . /opt/venv/bin/activate && \
+    pip install --no-cache-dir \
+    celldex \
+    biocpy
+
+RUN rm -rf /tmp/* /var/tmp/* /root/.cache/pip /var/lib/apt/lists/*

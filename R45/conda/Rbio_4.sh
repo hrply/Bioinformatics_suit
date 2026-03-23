@@ -167,6 +167,7 @@ log_info "[Stage 4f] Configuring reticulate..."
 # Set RETICULATE_PYTHON to avoid conda activate issues
 export RETICULATE_PYTHON="${CONDA_PREFIX}/bin/python"
 export RETICULATE_MINICONDA_ENABLED=FALSE
+export RETICULATE_USE_CONDA=FALSE
 
 # Create Renviron.site with reticulate configuration
 R_ENVIRON_DIR="${CONDA_PREFIX}/lib/R/etc"
@@ -175,6 +176,7 @@ cat > "${R_ENVIRON_DIR}/Renviron.site" << RENVIRON
 # R environment configuration
 RETICULATE_PYTHON=${CONDA_PREFIX}/bin/python
 RETICULATE_MINICONDA_ENABLED=FALSE
+export RETICULATE_USE_CONDA=FALSE
 PATH=${CONDA_PREFIX}/bin:\${PATH}
 RENVIRON
 
