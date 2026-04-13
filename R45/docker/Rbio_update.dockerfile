@@ -39,7 +39,6 @@ RUN Rscript -e '\
     if (nzchar(gh_proxy)) { \
         options(download.file.method = "curl", download.file.extra = paste0("--proxy ", gh_proxy)) \
     }; \
-
     options(repos = c(CRAN = Sys.getenv("CRAN_URL"))); \
     options(BioC_mirror = Sys.getenv("BIOC_URL")); \
     if (!requireNamespace("remotes", quietly = TRUE)) install.packages("remotes"); \
