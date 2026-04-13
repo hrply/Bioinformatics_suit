@@ -12,15 +12,47 @@ FROM ${BASE_IMAGE}
 ARG CRAN_URL=https://mirrors.tuna.tsinghua.edu.cn/CRAN
 ARG GITHUB_PROXY=http://192.168.3.147:7890
 
-# 更新 srtdisk
-RUN Rscript -e " \
-    options(repos = c(cran = Sys.getenv('CRAN_URL')), download.file.method = 'curl', download.file.extra = paste0('--proxy ', Sys.getenv('GITHUB_PROXY'))); \
-    options(BioC_mirror = Sys.getenv('BIOC_URL')); \
-    remotes::install_github('mianaz/srtdisk', upgrade = FALSE, dependencies = TRUE)" 
+# 更新 R 包 (引入防御性代理判断)
+RUN Rscript -e '\
+    # 动态配置代理 \
+    gh_proxy <- Sys.getenv("GITHUB_PROXY"); \
+    if (nzchar(gh_proxy)) { \
+        options(download.file.method = "curl", download.file.extra = paste0("--proxy ", gh_proxy)) \
+    }; \
+    \
+    options(repos = c(CRAN = Sys.getenv("CRAN_URL"))); \
+    options(BioC_mirror = Sys.getenv("BIOC_URL")); \
+    \
+    # 安装依赖包 \
+    if (!requireNamespace("remotes", quietly = TRUE)) install.packages("remotes"); \
+    if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager"); \
+    \
+    remotes::install_github("mianaz/srtdisk", upgrade = FALSE, dependencies = TRUE); \
+    BiocManager::install(c( \
+        "diffcyt", \
+        "flowCore", \
+        "flowViz", \
+        "ConsensusClusterPlus", \
+        "zellkonverter", \
+        "CytoGLMM", \
+        "CATALYST", \
+        "drc", \
+        "nnls", \
+        "plotrix" \
+    ), ask = FALSE, update = FALSE)'
 
+# 更新 Python 包
 RUN . /opt/venv/bin/activate && \
     pip install --no-cache-dir \
     celldex \
-    biocpy
+    biocpy \
+    pytometry \
+    scyan \
+    pyFlowSOM \
+    milopy \
+    scarf \
+    openTSNE \
+    pyreadr
 
+# 清理缓存以减小镜像体积
 RUN rm -rf /tmp/* /var/tmp/* /root/.cache/pip /var/lib/apt/lists/*
