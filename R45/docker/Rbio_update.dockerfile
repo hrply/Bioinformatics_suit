@@ -2,8 +2,8 @@
 # Rbio_update.dockerfile - 用于已构建后少量更新包内软件，大量更新推荐重新构建
 # =============================================================================
 # 用法:
-#   CPU: docker build -f Rbio_update.dockerfile --build-arg BASE_IMAGE=rbio:cpu -t rbio:cpu-v2 .
-#   GPU: docker build -f Rbio_update.dockerfile --build-arg BASE_IMAGE=rbio:gpu -t rbio:gpu-v2 .
+#   CPU: docker build -f Rbio_update.dockerfile --build-arg BASE_IMAGE=rbio:cpu --build-arg GITHUB_TOKEN=your_token -t rbio:cpu-v2 .
+#   GPU: docker build -f Rbio_update.dockerfile --build-arg BASE_IMAGE=rbio:gpu --build-arg GITHUB_TOKEN=your_token -t rbio:gpu-v2 .
 # =============================================================================
 
 ARG BASE_IMAGE=rbio:gpu
