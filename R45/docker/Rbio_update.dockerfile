@@ -75,4 +75,3 @@ RUN . /opt/venv/bin/activate && \
 
 # 清理缓存以减小镜像体积
 RUN rm -rf /tmp/* /var/tmp/* /root/.cache/pip /var/lib/apt/lists/*
-export GITHUB_TOKEN=
