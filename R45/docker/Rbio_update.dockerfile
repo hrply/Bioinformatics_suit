@@ -11,7 +11,7 @@ FROM ${BASE_IMAGE}
 
 ARG CRAN_URL=https://mirrors.tuna.tsinghua.edu.cn/CRAN
 ARG GITHUB_PROXY=http://192.168.3.147:7890
-ARG GITHUB_TOKEN
+
 
 # 更新 R 包 (非github 包)
 RUN Rscript -e '\
