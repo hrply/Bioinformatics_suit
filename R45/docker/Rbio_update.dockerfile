@@ -2,8 +2,9 @@
 # Rbio_update.dockerfile - 用于已构建后少量更新包内软件，大量更新推荐重新构建
 # =============================================================================
 # 用法:
-#   CPU: nohup docker build -f Rbio_update.dockerfile --build-arg BASE_IMAGE=rbio:cpu --build-arg GITHUB_TOKEN=your_token -t rbio:cpu-v2 . > update.log 2>&1 &
-#   GPU: nohup docker build -f Rbio_update.dockerfile --build-arg BASE_IMAGE=rbio:gpu --build-arg GITHUB_TOKEN=your_token -t rbio:gpu-v2 . > update.log 2>&1 &
+#   CPU: nohup docker build -f Rbio_update.dockerfile --build-arg BASE_IMAGE=rbio:cpu --build-arg GITHUB_TOKE=your_token -t rbio:cpu-v2 . > update.log 2>&1 &
+#   GPU: nohup docker build -f Rbio_update.dockerfile --build-arg BASE_IMAGE=rbio:gpu --build-arg GITHUB_TOKE=your_token -t rbio:gpu-v2 . > update.log 2>&1 &
+#   注意GITHUB_TOKE需要补全为token，因为git设置避免token泄露会被禁止上传
 # =============================================================================
 
 ARG BASE_IMAGE=rbio:gpu
@@ -11,7 +12,8 @@ FROM ${BASE_IMAGE}
 
 ARG CRAN_URL=https://mirrors.tuna.tsinghua.edu.cn/CRAN
 ARG GITHUB_PROXY=http://192.168.3.147:7890
-
+#注意补全为token，因为git设置避免token泄露会被禁止上传
+ARG GITHUB_TOKE
 
 # 更新 R 包 (非github 包)
 RUN Rscript -e '\
