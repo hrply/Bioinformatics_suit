@@ -11,6 +11,7 @@ FROM ${BASE_IMAGE}
 
 ARG CRAN_URL=https://mirrors.tuna.tsinghua.edu.cn/CRAN
 ARG GITHUB_PROXY=http://192.168.3.147:7890
+ARG GITHUB_TOKEN
 
 # 更新 R 包 (非github 包)
 RUN Rscript -e '\
@@ -28,6 +29,7 @@ RUN Rscript -e '\
         "CATALYST", \
         "drc", \
         "nnls", \
+        "miloR", \
         "plotrix" \
     ), ask = FALSE, update = FALSE)'
 
@@ -37,24 +39,40 @@ RUN Rscript -e '\
     if (nzchar(gh_proxy)) { \
         options(download.file.method = "curl", download.file.extra = paste0("--proxy ", gh_proxy)) \
     }; \
+    token <- Sys.getenv("GITHUB_TOKEN"); \
+    if (nzchar(token)) { \
+        message("Success: Using the provided GITHUB_TOKEN."); \
+    } else { \
+        message("Notice: No GITHUB_TOKEN provided. Forcing anonymous download."); \
+        Sys.unsetenv("GITHUB_TOKEN"); \
+    }; \
     options(repos = c(CRAN = Sys.getenv("CRAN_URL"))); \
     options(BioC_mirror = Sys.getenv("BIOC_URL")); \
+    token <- Sys.getenv("GITHUB_TOKEN"); \
+    print(paste("Using GitHub token:", token)); \
     if (!requireNamespace("remotes", quietly = TRUE)) install.packages("remotes"); \
     if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager"); \
     remotes::install_github("mianaz/srtdisk", upgrade = FALSE, dependencies = TRUE)'
 
-# 更新 Python 包
 RUN . /opt/venv/bin/activate && \
+    # 锁定numpy numba和pandas避免RAPIDS环境损坏 \
+    CUR_NUMPY=$(pip show numpy | grep "^Version:" | awk '{print $2}') && \
+    CUR_PANDAS=$(pip show pandas | grep "^Version:" | awk '{print $2}') && \
+    CUR_NUMBA=$(pip show numba | grep "^Version:" | awk '{print $2}') && \
+    echo "==================================================" && \
+    echo "🔒 锁定版本: Numpy=${CUR_NUMPY}, Pandas=${CUR_PANDAS}, Numba=${CUR_NUMBA}" && \
+    echo "==================================================" && \
+    \
     pip install --no-cache-dir \
+    "numpy==${CUR_NUMPY}" "pandas==${CUR_PANDAS}" "numba==${CUR_NUMBA}" \
     celldex \
     biocpy \
+    pyreadr \
     pytometry \
     scyan \
-    pyFlowSOM \
-    milopy \
     scarf \
-    openTSNE \
-    pyreadr
+    openTSNE
 
 # 清理缓存以减小镜像体积
 RUN rm -rf /tmp/* /var/tmp/* /root/.cache/pip /var/lib/apt/lists/*
+export GITHUB_TOKEN=

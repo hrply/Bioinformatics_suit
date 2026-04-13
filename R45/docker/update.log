@@ -1,0 +1,314 @@
+nohup: ignoring input
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Rbio_update.dockerfile
+#1 transferring dockerfile: 3.37kB done
+#1 WARN: SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "GITHUB_TOKEN") (line 14)
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/rbio:gpu
+#2 DONE 0.0s
+
+#3 [internal] load .dockerignore
+#3 transferring context: 2B done
+#3 DONE 0.0s
+
+#4 [1/5] FROM docker.io/library/rbio:gpu
+#4 DONE 0.0s
+
+#5 [2/5] RUN Rscript -e '    options(repos = c(CRAN = Sys.getenv("CRAN_URL")));     options(BioC_mirror = Sys.getenv("BIOC_URL"));     if (!requireNamespace("remotes", quietly = TRUE)) install.packages("remotes");     if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager");     BiocManager::install(c(         "diffcyt",         "flowCore",         "flowViz",         "ConsensusClusterPlus",         "zellkonverter",         "CytoGLMM",         "CATALYST",         "drc",         "nnls",         "miloR",         "plotrix"     ), ask = FALSE, update = FALSE)'
+#5 CACHED
+
+#6 [3/5] RUN Rscript -e '    gh_proxy <- Sys.getenv("GITHUB_PROXY");     if (nzchar(gh_proxy)) {         options(download.file.method = "curl", download.file.extra = paste0("--proxy ", gh_proxy))     };     token <- Sys.getenv("GITHUB_TOKEN");     if (nzchar(token)) {         message("Success: Using the provided GITHUB_TOKEN.");     } else {         message("Notice: No GITHUB_TOKEN provided. Forcing anonymous download.");         Sys.unsetenv("GITHUB_TOKEN");     };     options(repos = c(CRAN = Sys.getenv("CRAN_URL")));     options(BioC_mirror = Sys.getenv("BIOC_URL"));     token <- Sys.getenv("GITHUB_TOKEN");     print(paste("Using GitHub token:", token));     if (!requireNamespace("remotes", quietly = TRUE)) install.packages("remotes");     if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager");     remotes::install_github("mianaz/srtdisk", upgrade = FALSE, dependencies = TRUE)'
+#6 0.389 Success: Using the provided GITHUB_TOKEN.
+#6 0.389 [1] "Using GitHub token: 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"
+#6 0.413 Using github PAT from envvar GITHUB_TOKEN. Use `gitcreds::gitcreds_set()` and unset GITHUB_TOKEN in .Renviron (or elsewhere) if you want to use the more secure git credential store instead.
+#6 1.237 Downloading GitHub repo mianaz/srtdisk@HEAD
+#6 8.185 ── R CMD build ─────────────────────────────────────────────────────────────────
+#6 8.414 * checking for file ‘/tmp/RtmpsdPIfH/remotes7f3f89cd/mianaz-srtdisk-3f94d22/DESCRIPTION’ ... OK
+#6 8.558 * preparing ‘srtdisk’:
+#6 8.558 * checking DESCRIPTION meta-information ... OK
+#6 8.924 * checking for LF line-endings in source and make files and shell scripts
+#6 8.926 * checking for empty or unneeded directories
+#6 9.284 * building ‘srtdisk_0.3.2.tar.gz’
+#6 12.01 
+#6 12.06 Installing package into ‘/usr/local/lib/R/site-library’
+#6 12.06 (as ‘lib’ is unspecified)
+#6 12.99 * installing *source* package ‘srtdisk’ ...
+#6 12.99 ** this is package ‘srtdisk’ version ‘0.3.2’
+#6 13.00 ** using staged installation
+#6 13.02 ** R
+#6 13.05 ** inst
+#6 13.07 ** byte-compile and prepare package for lazy loading
+#6 21.51 ** help
+#6 21.72 *** installing help indices
+#6 21.86 ** building package indices
+#6 22.21 ** installing vignettes
+#6 22.22 ** testing if installed package can be loaded from temporary location
+#6 25.96 ** testing if installed package can be loaded from final location
+#6 29.83 ** testing if installed package keeps a record of temporary installation path
+#6 29.84 * DONE (srtdisk)
+#6 DONE 30.1s
+
+#7 [4/5] RUN . /opt/venv/bin/activate &&     CUR_NUMPY=$(pip show numpy | grep "^Version:" | awk '{print $2}') &&     CUR_PANDAS=$(pip show pandas | grep "^Version:" | awk '{print $2}') &&     CUR_NUMBA=$(pip show numba | grep "^Version:" | awk '{print $2}') &&     echo "==================================================" &&     echo "🔒 锁定版本: Numpy=${CUR_NUMPY}, Pandas=${CUR_PANDAS}, Numba=${CUR_NUMBA}" &&     echo "==================================================" &&         pip install --no-cache-dir     "numpy==${CUR_NUMPY}" "pandas==${CUR_PANDAS}" "numba==${CUR_NUMBA}"     celldex     biocpy     pyreadr     pytometry     scyan     scarf     openTSNE
+#7 2.114 ==================================================
+#7 2.114 🔒 锁定版本: Numpy=2.2.6, Pandas=2.3.3, Numba=0.61.2
+#7 2.114 ==================================================
+#7 2.422 Looking in indexes: https://pypi.tuna.tsinghua.edu.cn/simple, https://pypi.nvidia.com
+#7 2.423 Requirement already satisfied: numpy==2.2.6 in /opt/venv/lib/python3.12/site-packages (2.2.6)
+#7 2.424 Requirement already satisfied: pandas==2.3.3 in /opt/venv/lib/python3.12/site-packages (2.3.3)
+#7 2.424 Requirement already satisfied: numba==0.61.2 in /opt/venv/lib/python3.12/site-packages (0.61.2)
+#7 4.641 Collecting celldex
+#7 4.999   Downloading https://pypi.tuna.tsinghua.edu.cn/packages/7f/05/8b12bd9a9436eed33172af69f3d255ce436513c7374f45a0c7106cbbb9e0/celldex-0.3.0-py3-none-any.whl (15 kB)
+#7 5.535 Collecting biocpy
+#7 5.580   Downloading https://pypi.tuna.tsinghua.edu.cn/packages/4d/41/2b22301362175a82d2a11b2ad5462485c7a6bab7d09f085b66eb149ac6a2/BiocPy-0.2.2-py3-none-any.whl (4.9 kB)
+#7 6.535 Collecting pyreadr
+#7 6.582   Downloading https://pypi.tuna.tsinghua.edu.cn/packages/6d/2e/6277d370feebbe99f992ee3e409480e86715f34e52b5eb0383eddd1e5e7f/pyreadr-0.5.4-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (776 kB)
+#7 6.661      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 776.2/776.2 kB 9.4 MB/s  0:00:00
+#7 7.743 Collecting pytometry
+#7 7.788   Downloading https://pypi.tuna.tsinghua.edu.cn/packages/01/33/33c55bec76bbf27d0c262a4ebb67eff6f6c4293db64726ddaf2f2f80fced/pytometry-0.1.6-py3-none-any.whl (27 kB)
+#7 8.608 Collecting scyan
+#7 8.651   Downloading https://pypi.tuna.tsinghua.edu.cn/packages/95/8f/b54e5dfd7e0df055cd575c713a3abf26d3c5011538b76c3de593eca56b9e/scyan-1.7.6-py3-none-any.whl (67 kB)
+#7 9.559 Collecting scarf
+#7 9.607   Downloading https://pypi.tuna.tsinghua.edu.cn/packages/28/fb/1f8622bec706bcc6aa01e09564316cc7f38a1f633eeb82106339d1bd665f/scarf-0.32.3-py3-none-any.whl (226 kB)
+#7 10.87 Collecting openTSNE
+#7 10.92   Downloading https://pypi.tuna.tsinghua.edu.cn/packages/70/b8/0f757c94ea08ce907beaa223be700bdf2ea0378563326489aa7b2c2f7dc9/opentsne-1.0.4-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl (3.5 MB)
+#7 12.47      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 3.5/3.5 MB 2.4 MB/s  0:00:01
+#7 12.48 Requirement already satisfied: python-dateutil>=2.8.2 in /opt/venv/lib/python3.12/site-packages (from pandas==2.3.3) (2.9.0.post0)
+#7 12.48 Requirement already satisfied: pytz>=2020.1 in /opt/venv/lib/python3.12/site-packages (from pandas==2.3.3) (2026.1.post1)
+#7 12.48 Requirement already satisfied: tzdata>=2022.7 in /opt/venv/lib/python3.12/site-packages (from pandas==2.3.3) (2025.3)
+#7 12.49 Requirement already satisfied: llvmlite<0.45,>=0.44.0dev0 in /opt/venv/lib/python3.12/site-packages (from numba==0.61.2) (0.44.0)
+#7 13.49 Collecting dolomite_base (from celldex)
+#7 13.55   Downloading https://pypi.tuna.tsinghua.edu.cn/packages/5e/d3/2c9b77082127d8fffc5e98711a953ad7cf61bca3887f1edc7260f7f30847/dolomite_base-0.5.1-cp312-cp312-manylinux_2_28_x86_64.whl (2.8 MB)
+#7 14.11      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.8/2.8 MB 4.8 MB/s  0:00:00
+#7 15.00 Collecting dolomite_matrix (from celldex)
+#7 15.06   Downloading https://pypi.tuna.tsinghua.edu.cn/packages/e1/58/e1042733a27d77cfd537a4dfaa9e9e6593f40a5c0143d71ea9e26f365411/dolomite_matrix-0.4.1-py3-none-any.whl (22 kB)
+#7 15.63 Collecting dolomite_sce>=0.1.2 (from celldex)
+#7 15.67   Downloading https://pypi.tuna.tsinghua.edu.cn/packages/ac/7f/88e56d9aa30b1528d445db17b4571f7df29378522caa4e65a4c66d0082f6/dolomite_sce-0.3.0-py3-none-any.whl (6.2 kB)
+#7 16.62 Collecting gypsum_client>=0.1.3 (from celldex)
+#7 16.67   Downloading https://pypi.tuna.tsinghua.edu.cn/packages/fc/85/5d592f5ff1ea3b0b39b1430e4694f78fbd447e110fe99821cee553362bd7/gypsum_client-0.2.0.tar.gz (55 kB)
+#7 16.71   Installing build dependencies: started
+#7 24.61   Installing build dependencies: finished with status 'done'
+#7 24.61   Getting requirements to build wheel: started
+#7 24.99   Getting requirements to build wheel: finished with status 'done'
+#7 24.99   Preparing metadata (pyproject.toml): started
+#7 25.20   Preparing metadata (pyproject.toml): finished with status 'done'
+#7 26.05 Collecting delayedarray>=0.5.1 (from celldex)
+#7 26.09   Downloading https://pypi.tuna.tsinghua.edu.cn/packages/22/c4/fccc9d23d665ebb05d406ad723c96a4316c513ca70096274414ac49487f1/delayedarray-0.6.2-py3-none-any.whl (64 kB)
+#7 27.07 Collecting summarizedexperiment (from celldex)
+#7 27.12   Downloading https://pypi.tuna.tsinghua.edu.cn/packages/de/ca/c37db95b97e95da4b8152b264547dae5d165ba06022d75b7702ef03dba59/summarizedexperiment-0.6.5-py3-none-any.whl (23 kB)
+#7 28.02 Collecting singlecellexperiment (from celldex)
+#7 28.06   Downloading https://pypi.tuna.tsinghua.edu.cn/packages/dd/aa/19fe359f0ee03c79773b55f64ec9de3038c6a357a4e8e61606d7a02baaee/singlecellexperiment-0.6.2-py3-none-any.whl (16 kB)
+#7 29.07 Collecting biocframe (from celldex)
+#7 29.12   Downloading https://pypi.tuna.tsinghua.edu.cn/packages/18/da/fc76ed5e4c2a2e0a963b38ced4e6ffd9f2a2fa9571578d06952b25296982/biocframe-0.7.2-py3-none-any.whl (22 kB)
+#7 30.24 Collecting genomicranges (from biocpy)
+#7 30.29   Downloading https://pypi.tuna.tsinghua.edu.cn/packages/af/c8/bb39278bec00559bef2b5611c3f25c368005110f0513c92f6c9634a95364/genomicranges-0.8.4-py3-none-any.whl (39 kB)
+#7 31.37 Collecting multiassayexperiment (from biocpy)
+#7 31.42   Downloading https://pypi.tuna.tsinghua.edu.cn/packages/88/c4/700a4b24b2b0f81d8e2560e7072fbdb2dfc4073750167b2f7a3b570cc701/multiassayexperiment-0.6.0-py3-none-any.whl (14 kB)
+#7 32.29 Collecting rds2py (from biocpy)
+#7 32.34   Downloading https://pypi.tuna.tsinghua.edu.cn/packages/b1/0c/67af2e9713e543778dde27949c7c891ac765f4f568dd689d98a481417288/rds2py-0.9.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (202 kB)
+#7 33.21 Collecting mopsy (from biocpy)
+#7 33.26   Downloading https://pypi.tuna.tsinghua.edu.cn/packages/25/66/888619634977c42f557d55f1c22029f28468a111b0eddb145628f765fd9e/mopsy-0.3.0-py3-none-any.whl (10 kB)
+#7 33.76 Collecting pybiocfilecache (from biocpy)
+#7 33.81   Downloading https://pypi.tuna.tsinghua.edu.cn/packages/3d/8a/a645dcf9097bdd75012be719b2b3061907ae61197d26e8d39e8e4317faee/pybiocfilecache-0.7.0-py3-none-any.whl (12 kB)
+#7 33.81 Requirement already satisfied: scipy in /opt/venv/lib/python3.12/site-packages (from biocpy) (1.16.3)
+#7 33.81 Requirement already satisfied: anndata in /opt/venv/lib/python3.12/site-packages (from pytometry) (0.12.10)
+#7 34.64 Collecting consensusclustering (from pytometry)
+#7 34.69   Downloading https://pypi.tuna.tsinghua.edu.cn/packages/4d/e5/16229de8b6562684108bf8d1b8c58540b560ef5a07fa8d5ffadcb770224a/consensusclustering-0.2.4-py3-none-any.whl (7.5 kB)
+#7 34.69 Requirement already satisfied: flowutils in /opt/venv/lib/python3.12/site-packages (from pytometry) (1.2.2)
+#7 34.69 Requirement already satisfied: matplotlib in /opt/venv/lib/python3.12/site-packages (from pytometry) (3.10.8)
+#7 35.57 Collecting minisom (from pytometry)
+#7 35.61   Downloading https://pypi.tuna.tsinghua.edu.cn/packages/6d/9c/999bc2f1bee4cfbb6157ac03db32f5a831322479151941bc997774c405c6/minisom-2.3.6.tar.gz (13 kB)
+#7 35.62   Installing build dependencies: started
+#7 37.96   Installing build dependencies: finished with status 'done'
+#7 37.96   Getting requirements to build wheel: started
+#7 38.26   Getting requirements to build wheel: finished with status 'done'
+#7 38.26   Preparing metadata (pyproject.toml): started
+#7 38.42   Preparing metadata (pyproject.toml): finished with status 'done'
+#7 39.46 Collecting readfcs>=1.1.0 (from pytometry)
+#7 39.50   Downloading https://pypi.tuna.tsinghua.edu.cn/packages/08/40/5946741473075cfed3f4b42a14839cd1672761191dbecff3aa4648b28f63/readfcs-2.1.0-py2.py3-none-any.whl (10 kB)
+#7 39.51 Requirement already satisfied: scanpy in /opt/venv/lib/python3.12/site-packages (from pytometry) (1.12)
+#7 39.51 Requirement already satisfied: seaborn in /opt/venv/lib/python3.12/site-packages (from pytometry) (0.13.2)
+#7 39.51 Requirement already satisfied: fcsparser>=0.2.4 in /opt/venv/lib/python3.12/site-packages (from scyan) (0.2.4)
+#7 40.38 Collecting fcswrite>=0.6.2 (from scyan)
+#7 40.42   Downloading https://pypi.tuna.tsinghua.edu.cn/packages/83/ff/89e4d84fe1fc59f68d9dd2059b60393369e7636d36b939db2db4a10d7053/fcswrite-0.6.4-py3-none-any.whl (7.3 kB)
+#7 40.43 Requirement already satisfied: lightning>=2.2.0 in /opt/venv/lib/python3.12/site-packages (from scyan) (2.6.1)
+#7 40.78 Collecting requests>=2.33.1 (from scyan)
+#7 40.82   Downloading https://pypi.tuna.tsinghua.edu.cn/packages/d7/8e/7540e8a2036f79a125c1d2ebadf69ed7901608859186c856fa0388ef4197/requests-2.33.1-py3-none-any.whl (64 kB)
+#7 40.83 Requirement already satisfied: torch>=2.2.0 in /opt/venv/lib/python3.12/site-packages (from scyan) (2.10.0+cu130)
+#7 40.83 Requirement already satisfied: umap-learn>=0.5.3 in /opt/venv/lib/python3.12/site-packages (from scyan) (0.5.11)
+#7 41.93 Collecting dask<=2024.7.1 (from dask[array]<=2024.7.1->scarf)
+#7 41.98   Downloading https://pypi.tuna.tsinghua.edu.cn/packages/5f/83/1b4cc731fa8550a3041adf1c8e149a318dfee542d6f59a1940552e06df87/dask-2024.7.1-py3-none-any.whl (1.2 MB)
+#7 42.18      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.2/1.2 MB 6.1 MB/s  0:00:00
+#7 42.19 Requirement already satisfied: h5py>=3.3.0 in /opt/venv/lib/python3.12/site-packages (from scarf) (3.16.0)
+#7 43.14 Collecting hnswlib==0.8.0 (from scarf)
+#7 43.19   Downloading https://pypi.tuna.tsinghua.edu.cn/packages/cf/7a/1a9b1405f2eb59515f06c3074750b03e0e96edf7fee0f6dd6df81d9c21d7/hnswlib-0.8.0.tar.gz (36 kB)
+#7 43.21   Installing build dependencies: started
+#7 51.53   Installing build dependencies: finished with status 'done'
+#7 51.53   Getting requirements to build wheel: started
+#7 52.07   Getting requirements to build wheel: finished with status 'done'
+#7 52.07   Preparing metadata (pyproject.toml): started
+#7 52.33   Preparing metadata (pyproject.toml): finished with status 'done'
+#7 52.71 Collecting importlib_metadata (from scarf)
+#7 52.76   Downloading https://pypi.tuna.tsinghua.edu.cn/packages/38/3d/2d244233ac4f76e38533cfcb2991c9eb4c7bf688ae0a036d30725b8faafe/importlib_metadata-9.0.0-py3-none-any.whl (27 kB)
+#7 52.77 Requirement already satisfied: joblib in /opt/venv/lib/python3.12/site-packages (from scarf) (1.5.3)
+#7 52.77 Requirement already satisfied: leidenalg in /opt/venv/lib/python3.12/site-packages (from scarf) (0.11.0)
+#7 53.59 Collecting loguru (from scarf)
+#7 53.64   Downloading https://pypi.tuna.tsinghua.edu.cn/packages/0c/29/0348de65b8cc732daa3e33e67806420b2ae89bdce2b04af740289c5c6c8c/loguru-0.7.3-py3-none-any.whl (61 kB)
+#7 54.00 Collecting networkx==3.4.2 (from scarf)
+#7 54.04   Downloading https://pypi.tuna.tsinghua.edu.cn/packages/b9/54/dd730b32ea14ea797530a4479b2ed46a6fb250f682a9cfb997e968bf0261/networkx-3.4.2-py3-none-any.whl (1.7 MB)
+#7 54.30      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.7/1.7 MB 6.7 MB/s  0:00:00
+#7 55.29 Collecting numcodecs<0.16 (from scarf)
+#7 55.34   Downloading https://pypi.tuna.tsinghua.edu.cn/packages/28/7d/7527d9180bc76011d6163c848c9cf02cd28a623c2c66cf543e1e86de7c5e/numcodecs-0.15.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (8.9 MB)
+#7 56.17      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 8.9/8.9 MB 10.9 MB/s  0:00:00
+#7 56.80 INFO: pip is looking at multiple versions of scarf to determine which version is compatible with other requirements. This could take a while.
+#7 56.80 Collecting scarf
+#7 56.85   Downloading https://pypi.tuna.tsinghua.edu.cn/packages/64/89/3d48c725024e1129c628eeac0b2322716765c5aaf1d61e26e9277eab8060/scarf-0.32.2-py3-none-any.whl (226 kB)
+#7 56.92   Downloading https://pypi.tuna.tsinghua.edu.cn/packages/94/06/f6324c724619dbc4135a68f0c14a15b006520b4d8df9bceecba60befa691/scarf-0.32.1-py3-none-any.whl (226 kB)
+#7 56.98   Downloading https://pypi.tuna.tsinghua.edu.cn/packages/fa/cb/062d4a1107ab40e185952f81ba98a20cc81475358b40c2bbcbc5732d19d1/scarf-0.31.4-py3-none-any.whl (224 kB)
+#7 57.00 Requirement already satisfied: networkx in /opt/venv/lib/python3.12/site-packages (from scarf) (3.6.1)
+#7 57.05   Downloading https://pypi.tuna.tsinghua.edu.cn/packages/e9/ea/0b993a0b88640c404e42ce1c51f8a1d28b098b8ccc66476ff1c294e733a0/scarf-0.31.3-py3-none-any.whl (224 kB)
+#7 57.12   Downloading https://pypi.tuna.tsinghua.edu.cn/packages/4b/9a/65da6fc7963e82728d6924e718612fd05eb00ebf29bdcab6292fb64acc64/scarf-0.31.1-py3-none-any.whl (223 kB)
+#7 57.18   Downloading https://pypi.tuna.tsinghua.edu.cn/packages/a1/76/dccacc7ecf196d52f3124e0cd336f0b9da3636311b6408665344a42d42ae/scarf-0.30.0-py3-none-any.whl (216 kB)
+#7 57.24   Downloading https://pypi.tuna.tsinghua.edu.cn/packages/c8/c3/452b5bee0af68bb0354bd8adde42c9f9083009ec54b3846a3056718a3eb8/scarf-0.29.7-py3-none-any.whl (215 kB)
+#7 57.26 INFO: pip is still looking at multiple versions of scarf to determine which version is compatible with other requirements. This could take a while.
+#7 57.30   Downloading https://pypi.tuna.tsinghua.edu.cn/packages/3f/7b/a9356c91739e20e290c2aad778906f01d2b566d3afd87f5a6653aeb2715e/scarf-0.29.5-py3-none-any.whl (209 kB)
+#7 57.36   Downloading https://pypi.tuna.tsinghua.edu.cn/packages/d6/79/6e6ce9d663957661567f6daad0f07bd629b54c6aea7d846f89c101841799/scarf-0.29.4-py3-none-any.whl (207 kB)
+#7 57.43   Downloading https://pypi.tuna.tsinghua.edu.cn/packages/2a/09/c4e0978742d1d49390e42630c273ce55351e0083ed5a437e69ffcddcb59b/scarf-0.29.3-py3-none-any.whl (207 kB)
+#7 57.45 Requirement already satisfied: scikit-learn in /opt/venv/lib/python3.12/site-packages (from scarf) (1.8.0)
+#7 57.45 Requirement already satisfied: statsmodels in /opt/venv/lib/python3.12/site-packages (from scarf) (0.14.6)
+#7 57.45 Requirement already satisfied: threadpoolctl in /opt/venv/lib/python3.12/site-packages (from scarf) (3.6.0)
+#7 57.45 Requirement already satisfied: dask>=2024.7.1 in /opt/venv/lib/python3.12/site-packages (from dask[array]>=2024.7.1->scarf) (2026.1.1)
+#7 57.45 Requirement already satisfied: zarr in /opt/venv/lib/python3.12/site-packages (from scarf) (3.1.5)
+#7 57.45 Requirement already satisfied: scikit-network in /opt/venv/lib/python3.12/site-packages (from scarf) (0.33.5)
+#7 57.45 Requirement already satisfied: tqdm in /opt/venv/lib/python3.12/site-packages (from scarf) (4.67.3)
+#7 57.45 Requirement already satisfied: setuptools in /opt/venv/lib/python3.12/site-packages (from scarf) (81.0.0)
+#7 57.45 Requirement already satisfied: packaging in /opt/venv/lib/python3.12/site-packages (from scarf) (26.0)
+#7 57.46 Requirement already satisfied: array-api-compat>=1.7.1 in /opt/venv/lib/python3.12/site-packages (from anndata->pytometry) (1.14.0)
+#7 57.46 Requirement already satisfied: legacy-api-wrap in /opt/venv/lib/python3.12/site-packages (from anndata->pytometry) (1.5)
+#7 57.46 Requirement already satisfied: natsort in /opt/venv/lib/python3.12/site-packages (from anndata->pytometry) (8.4.0)
+#7 57.47 Requirement already satisfied: click>=8.1 in /opt/venv/lib/python3.12/site-packages (from dask>=2024.7.1->dask[array]>=2024.7.1->scarf) (8.3.1)
+#7 57.47 Requirement already satisfied: cloudpickle>=3.0.0 in /opt/venv/lib/python3.12/site-packages (from dask>=2024.7.1->dask[array]>=2024.7.1->scarf) (3.1.2)
+#7 57.47 Requirement already satisfied: fsspec>=2021.09.0 in /opt/venv/lib/python3.12/site-packages (from dask>=2024.7.1->dask[array]>=2024.7.1->scarf) (2026.2.0)
+#7 57.47 Requirement already satisfied: partd>=1.4.0 in /opt/venv/lib/python3.12/site-packages (from dask>=2024.7.1->dask[array]>=2024.7.1->scarf) (1.4.2)
+#7 57.47 Requirement already satisfied: pyyaml>=5.3.1 in /opt/venv/lib/python3.12/site-packages (from dask>=2024.7.1->dask[array]>=2024.7.1->scarf) (6.0.3)
+#7 57.47 Requirement already satisfied: toolz>=0.12.0 in /opt/venv/lib/python3.12/site-packages (from dask>=2024.7.1->dask[array]>=2024.7.1->scarf) (1.1.0)
+#7 58.40 Collecting biocutils>=0.1.8 (from delayedarray>=0.5.1->celldex)
+#7 58.45   Downloading https://pypi.tuna.tsinghua.edu.cn/packages/67/76/ccac714cd5f4616438fca74034ef701a52cd2f00ec3ea6ee1bc8806483c2/biocutils-0.3.4-py3-none-any.whl (51 kB)
+#7 59.31 Collecting dolomite-se>=0.3.0 (from dolomite_sce>=0.1.2->celldex)
+#7 59.38   Downloading https://pypi.tuna.tsinghua.edu.cn/packages/e9/ba/56c33f4a5ede0a58b44981ff73ea442c59a1688b84dd6c30c1f008b3a1aa/dolomite_se-0.3.0-py3-none-any.whl (8.8 kB)
+#7 60.25 Collecting dolomite-ranges>=0.2.0 (from dolomite-se>=0.3.0->dolomite_sce>=0.1.2->celldex)
+#7 60.29   Downloading https://pypi.tuna.tsinghua.edu.cn/packages/4c/76/e20d437e46859e77023a1983b76c4aafb2815272b7fc1f32eccc43418690/dolomite_ranges-0.4.0-py3-none-any.whl (11 kB)
+#7 61.28 Collecting hdf5array (from dolomite_matrix->celldex)
+#7 61.32   Downloading https://pypi.tuna.tsinghua.edu.cn/packages/70/a7/01397bfe1d9a6e55477ffcdf33982a777d4c3cc9aacc2b6acbb8d2bc5c7a/hdf5array-0.5.0-py3-none-any.whl (10 kB)
+#7 62.26 Collecting compressed-lists>=0.4.4 (from dolomite-ranges>=0.2.0->dolomite-se>=0.3.0->dolomite_sce>=0.1.2->celldex)
+#7 62.31   Downloading https://pypi.tuna.tsinghua.edu.cn/packages/f3/ca/69ba3f7d44498ed702c65fcebf246d91dfcc89990dd894f054be2261ac40/compressed_lists-0.4.4-py3-none-any.whl (20 kB)
+#7 62.31 Requirement already satisfied: six in /opt/venv/lib/python3.12/site-packages (from fcsparser>=0.2.4->scyan) (1.17.0)
+#7 63.29 Collecting iranges>=0.7.2 (from genomicranges->biocpy)
+#7 63.34   Downloading https://pypi.tuna.tsinghua.edu.cn/packages/09/e2/96bb51142e421ea1b9882eb94abec836d4ceedc0660b33fe0788ecc28a6c/iranges-0.7.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (201 kB)
+#7 63.36 Requirement already satisfied: filelock in /opt/venv/lib/python3.12/site-packages (from gypsum_client>=0.1.3->celldex) (3.25.2)
+#7 63.36 Requirement already satisfied: jsonschema in /opt/venv/lib/python3.12/site-packages (from gypsum_client>=0.1.3->celldex) (4.26.0)
+#7 64.34 Collecting appdirs (from gypsum_client>=0.1.3->celldex)
+#7 64.38   Downloading https://pypi.tuna.tsinghua.edu.cn/packages/3b/00/2344469e2084fb287c2e0b57b72910309874c3245463acd6cf5e3db69324/appdirs-1.4.4-py2.py3-none-any.whl (9.6 kB)
+#7 64.40 Requirement already satisfied: lightning-utilities<2.0,>=0.10.0 in /opt/venv/lib/python3.12/site-packages (from lightning>=2.2.0->scyan) (0.15.3)
+#7 64.40 Requirement already satisfied: torchmetrics<3.0,>0.7.0 in /opt/venv/lib/python3.12/site-packages (from lightning>=2.2.0->scyan) (1.9.0)
+#7 64.40 Requirement already satisfied: typing-extensions<6.0,>4.5.0 in /opt/venv/lib/python3.12/site-packages (from lightning>=2.2.0->scyan) (4.15.0)
+#7 64.40 Requirement already satisfied: pytorch-lightning in /opt/venv/lib/python3.12/site-packages (from lightning>=2.2.0->scyan) (2.6.1)
+#7 64.43 Requirement already satisfied: aiohttp!=4.0.0a0,!=4.0.0a1 in /opt/venv/lib/python3.12/site-packages (from fsspec[http]<2028.0,>=2022.5.0->lightning>=2.2.0->scyan) (3.13.3)
+#7 64.44 Requirement already satisfied: sympy>=1.13.3 in /opt/venv/lib/python3.12/site-packages (from torch>=2.2.0->scyan) (1.14.0)
+#7 64.44 Requirement already satisfied: jinja2 in /opt/venv/lib/python3.12/site-packages (from torch>=2.2.0->scyan) (3.0.3)
+#7 64.44 Requirement already satisfied: cuda-bindings==13.0.3 in /opt/venv/lib/python3.12/site-packages (from torch>=2.2.0->scyan) (13.0.3)
+#7 64.44 Requirement already satisfied: nvidia-cuda-nvrtc==13.0.88 in /opt/venv/lib/python3.12/site-packages (from torch>=2.2.0->scyan) (13.0.88)
+#7 64.44 Requirement already satisfied: nvidia-cuda-runtime==13.0.96 in /opt/venv/lib/python3.12/site-packages (from torch>=2.2.0->scyan) (13.0.96)
+#7 64.44 Requirement already satisfied: nvidia-cuda-cupti==13.0.85 in /opt/venv/lib/python3.12/site-packages (from torch>=2.2.0->scyan) (13.0.85)
+#7 64.44 Requirement already satisfied: nvidia-cudnn-cu13==9.15.1.9 in /opt/venv/lib/python3.12/site-packages (from torch>=2.2.0->scyan) (9.15.1.9)
+#7 64.44 Requirement already satisfied: nvidia-cublas==13.1.0.3 in /opt/venv/lib/python3.12/site-packages (from torch>=2.2.0->scyan) (13.1.0.3)
+#7 64.44 Requirement already satisfied: nvidia-cufft==12.0.0.61 in /opt/venv/lib/python3.12/site-packages (from torch>=2.2.0->scyan) (12.0.0.61)
+#7 64.44 Requirement already satisfied: nvidia-curand==10.4.0.35 in /opt/venv/lib/python3.12/site-packages (from torch>=2.2.0->scyan) (10.4.0.35)
+#7 64.44 Requirement already satisfied: nvidia-cusolver==12.0.4.66 in /opt/venv/lib/python3.12/site-packages (from torch>=2.2.0->scyan) (12.0.4.66)
+#7 64.45 Requirement already satisfied: nvidia-cusparse==12.6.3.3 in /opt/venv/lib/python3.12/site-packages (from torch>=2.2.0->scyan) (12.6.3.3)
+#7 64.45 Requirement already satisfied: nvidia-cusparselt-cu13==0.8.0 in /opt/venv/lib/python3.12/site-packages (from torch>=2.2.0->scyan) (0.8.0)
+#7 64.45 Requirement already satisfied: nvidia-nccl-cu13==2.28.9 in /opt/venv/lib/python3.12/site-packages (from torch>=2.2.0->scyan) (2.28.9)
+#7 64.45 Requirement already satisfied: nvidia-nvshmem-cu13==3.4.5 in /opt/venv/lib/python3.12/site-packages (from torch>=2.2.0->scyan) (3.4.5)
+#7 64.45 Requirement already satisfied: nvidia-nvtx==13.0.85 in /opt/venv/lib/python3.12/site-packages (from torch>=2.2.0->scyan) (13.0.85)
+#7 64.45 Requirement already satisfied: nvidia-nvjitlink==13.0.88 in /opt/venv/lib/python3.12/site-packages (from torch>=2.2.0->scyan) (13.0.88)
+#7 64.45 Requirement already satisfied: nvidia-cufile==1.15.1.6 in /opt/venv/lib/python3.12/site-packages (from torch>=2.2.0->scyan) (1.15.1.6)
+#7 64.45 Requirement already satisfied: triton==3.6.0 in /opt/venv/lib/python3.12/site-packages (from torch>=2.2.0->scyan) (3.6.0)
+#7 64.45 Requirement already satisfied: cuda-pathfinder~=1.1 in /opt/venv/lib/python3.12/site-packages (from cuda-bindings==13.0.3->torch>=2.2.0->scyan) (1.4.3)
+#7 64.49 Requirement already satisfied: aiohappyeyeballs>=2.5.0 in /opt/venv/lib/python3.12/site-packages (from aiohttp!=4.0.0a0,!=4.0.0a1->fsspec[http]<2028.0,>=2022.5.0->lightning>=2.2.0->scyan) (2.6.1)
+#7 64.49 Requirement already satisfied: aiosignal>=1.4.0 in /opt/venv/lib/python3.12/site-packages (from aiohttp!=4.0.0a0,!=4.0.0a1->fsspec[http]<2028.0,>=2022.5.0->lightning>=2.2.0->scyan) (1.4.0)
+#7 64.49 Requirement already satisfied: attrs>=17.3.0 in /opt/venv/lib/python3.12/site-packages (from aiohttp!=4.0.0a0,!=4.0.0a1->fsspec[http]<2028.0,>=2022.5.0->lightning>=2.2.0->scyan) (25.4.0)
+#7 64.49 Requirement already satisfied: frozenlist>=1.1.1 in /opt/venv/lib/python3.12/site-packages (from aiohttp!=4.0.0a0,!=4.0.0a1->fsspec[http]<2028.0,>=2022.5.0->lightning>=2.2.0->scyan) (1.8.0)
+#7 64.49 Requirement already satisfied: multidict<7.0,>=4.5 in /opt/venv/lib/python3.12/site-packages (from aiohttp!=4.0.0a0,!=4.0.0a1->fsspec[http]<2028.0,>=2022.5.0->lightning>=2.2.0->scyan) (6.7.1)
+#7 64.49 Requirement already satisfied: propcache>=0.2.0 in /opt/venv/lib/python3.12/site-packages (from aiohttp!=4.0.0a0,!=4.0.0a1->fsspec[http]<2028.0,>=2022.5.0->lightning>=2.2.0->scyan) (0.4.1)
+#7 64.49 Requirement already satisfied: yarl<2.0,>=1.17.0 in /opt/venv/lib/python3.12/site-packages (from aiohttp!=4.0.0a0,!=4.0.0a1->fsspec[http]<2028.0,>=2022.5.0->lightning>=2.2.0->scyan) (1.23.0)
+#7 64.49 Requirement already satisfied: idna>=2.0 in /opt/venv/lib/python3.12/site-packages (from yarl<2.0,>=1.17.0->aiohttp!=4.0.0a0,!=4.0.0a1->fsspec[http]<2028.0,>=2022.5.0->lightning>=2.2.0->scyan) (3.11)
+#7 64.51 Requirement already satisfied: locket in /opt/venv/lib/python3.12/site-packages (from partd>=1.4.0->dask>=2024.7.1->dask[array]>=2024.7.1->scarf) (1.0.0)
+#7 64.51 Requirement already satisfied: flowio in /opt/venv/lib/python3.12/site-packages (from readfcs>=1.1.0->pytometry) (1.4.0)
+#7 64.51 Requirement already satisfied: charset_normalizer<4,>=2 in /opt/venv/lib/python3.12/site-packages (from requests>=2.33.1->scyan) (3.4.6)
+#7 64.52 Requirement already satisfied: urllib3<3,>=1.26 in /opt/venv/lib/python3.12/site-packages (from requests>=2.33.1->scyan) (2.6.3)
+#7 64.52 Requirement already satisfied: certifi>=2023.5.7 in /opt/venv/lib/python3.12/site-packages (from requests>=2.33.1->scyan) (2026.2.25)
+#7 64.54 Requirement already satisfied: contourpy>=1.0.1 in /opt/venv/lib/python3.12/site-packages (from matplotlib->pytometry) (1.3.3)
+#7 64.54 Requirement already satisfied: cycler>=0.10 in /opt/venv/lib/python3.12/site-packages (from matplotlib->pytometry) (0.12.1)
+#7 64.54 Requirement already satisfied: fonttools>=4.22.0 in /opt/venv/lib/python3.12/site-packages (from matplotlib->pytometry) (4.62.1)
+#7 64.54 Requirement already satisfied: kiwisolver>=1.3.1 in /opt/venv/lib/python3.12/site-packages (from matplotlib->pytometry) (1.5.0)
+#7 64.54 Requirement already satisfied: pillow>=8 in /opt/venv/lib/python3.12/site-packages (from matplotlib->pytometry) (12.1.1)
+#7 64.54 Requirement already satisfied: pyparsing>=3 in /opt/venv/lib/python3.12/site-packages (from matplotlib->pytometry) (3.3.2)
+#7 64.56 Requirement already satisfied: mpmath<1.4,>=1.1.0 in /opt/venv/lib/python3.12/site-packages (from sympy>=1.13.3->torch>=2.2.0->scyan) (1.3.0)
+#7 64.57 Requirement already satisfied: pynndescent>=0.5 in /opt/venv/lib/python3.12/site-packages (from umap-learn>=0.5.3->scyan) (0.6.0)
+#7 64.60 Requirement already satisfied: donfig>=0.8 in /opt/venv/lib/python3.12/site-packages (from zarr->scarf) (0.8.1.post1)
+#7 64.60 Requirement already satisfied: google-crc32c>=1.5 in /opt/venv/lib/python3.12/site-packages (from zarr->scarf) (1.8.0)
+#7 64.60 Requirement already satisfied: numcodecs>=0.14 in /opt/venv/lib/python3.12/site-packages (from zarr->scarf) (0.16.5)
+#7 65.10 Collecting kneed>=0.8.5 (from consensusclustering->pytometry)
+#7 65.14   Downloading https://pypi.tuna.tsinghua.edu.cn/packages/4a/cd/23c89d53c36028bccb39f55aa5dd24c4bdaab76c4d556ad43dc8cf026918/kneed-0.8.6-py3-none-any.whl (10 kB)
+#7 65.17 Requirement already satisfied: zipp>=3.20 in /opt/venv/lib/python3.12/site-packages (from importlib_metadata->scarf) (3.23.0)
+#7 65.17 Requirement already satisfied: MarkupSafe>=2.0 in /opt/venv/lib/python3.12/site-packages (from jinja2->torch>=2.2.0->scyan) (3.0.3)
+#7 65.18 Requirement already satisfied: jsonschema-specifications>=2023.03.6 in /opt/venv/lib/python3.12/site-packages (from jsonschema->gypsum_client>=0.1.3->celldex) (2025.9.1)
+#7 65.18 Requirement already satisfied: referencing>=0.28.4 in /opt/venv/lib/python3.12/site-packages (from jsonschema->gypsum_client>=0.1.3->celldex) (0.37.0)
+#7 65.18 Requirement already satisfied: rpds-py>=0.25.0 in /opt/venv/lib/python3.12/site-packages (from jsonschema->gypsum_client>=0.1.3->celldex) (0.30.0)
+#7 65.19 Requirement already satisfied: igraph<2.0,>=1.0.0 in /opt/venv/lib/python3.12/site-packages (from leidenalg->scarf) (1.0.0)
+#7 65.20 Requirement already satisfied: texttable>=1.6.2 in /opt/venv/lib/python3.12/site-packages (from igraph<2.0,>=1.0.0->leidenalg->scarf) (1.7.0)
+#7 66.60 Collecting sqlalchemy (from pybiocfilecache->biocpy)
+#7 66.65   Downloading https://pypi.tuna.tsinghua.edu.cn/packages/2c/fa/65fcae2ed62f84ab72cf89536c7c3217a156e71a2c111b1305ab6f0690e2/sqlalchemy-2.0.49-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (3.4 MB)
+#7 66.97      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 3.4/3.4 MB 10.5 MB/s  0:00:00
+#7 66.99 Requirement already satisfied: fast-array-utils>=1.2.1 in /opt/venv/lib/python3.12/site-packages (from fast-array-utils[accel,sparse]>=1.2.1->scanpy->pytometry) (1.3.1)
+#7 66.99 Requirement already satisfied: patsy in /opt/venv/lib/python3.12/site-packages (from scanpy->pytometry) (1.0.2)
+#7 66.99 Requirement already satisfied: session-info2 in /opt/venv/lib/python3.12/site-packages (from scanpy->pytometry) (0.4)
+#7 68.23 Collecting greenlet>=1 (from sqlalchemy->pybiocfilecache->biocpy)
+#7 68.28   Downloading https://pypi.tuna.tsinghua.edu.cn/packages/36/f7/229f3aed6948faa20e0616a0b8568da22e365ede6a54d7d369058b128afd/greenlet-3.4.0-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl (615 kB)
+#7 68.53      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 615.1/615.1 kB 1.5 MB/s  0:00:00
+#7 68.55 Building wheels for collected packages: gypsum_client, hnswlib, minisom
+#7 68.55   Building wheel for gypsum_client (pyproject.toml): started
+#7 68.80   Building wheel for gypsum_client (pyproject.toml): finished with status 'done'
+#7 68.80   Created wheel for gypsum_client: filename=gypsum_client-0.2.0-py3-none-any.whl size=41886 sha256=1cc68343054ee9ac3e1b5a2baa902bf9b24a9d92c532eccbf163487de8fe9de6
+#7 68.80   Stored in directory: /tmp/pip-ephem-wheel-cache-u6z4cuba/wheels/98/d3/bf/fc0788ce3e92336aa39defeb62a493fce7fed4e4860570523d
+#7 68.81   Building wheel for hnswlib (pyproject.toml): started
+#7 86.59   Building wheel for hnswlib (pyproject.toml): finished with status 'done'
+#7 86.59   Created wheel for hnswlib: filename=hnswlib-0.8.0-cp312-cp312-linux_x86_64.whl size=2596854 sha256=f1bce3bb138eea2c21a0fda524102d439bb562b6036c3daea747776fe7e7a3d8
+#7 86.59   Stored in directory: /tmp/pip-ephem-wheel-cache-u6z4cuba/wheels/2b/01/f5/fad1ff3b057d4dd1ba036a4f1b8a3ac4b23b591d25e8521d5b
+#7 86.59   Building wheel for minisom (pyproject.toml): started
+#7 86.78   Building wheel for minisom (pyproject.toml): finished with status 'done'
+#7 86.78   Created wheel for minisom: filename=minisom-2.3.6-py3-none-any.whl size=13170 sha256=30523ffd173365743c3213d9fe3453deb0c607352869baccba9c086070ce473b
+#7 86.78   Stored in directory: /tmp/pip-ephem-wheel-cache-u6z4cuba/wheels/97/3f/a9/30ea143d2c4917e679a82ae9d46b98ca4ae845e4c8f3920ba3
+#7 86.78 Successfully built gypsum_client hnswlib minisom
+#7 87.21 Installing collected packages: minisom, appdirs, requests, loguru, importlib_metadata, hnswlib, greenlet, fcswrite, biocutils, sqlalchemy, rds2py, mopsy, kneed, delayedarray, biocframe, pyreadr, pybiocfilecache, openTSNE, hdf5array, dolomite_base, compressed-lists, readfcs, iranges, gypsum_client, dolomite_matrix, consensusclustering, scarf, genomicranges, summarizedexperiment, pytometry, dolomite-ranges, singlecellexperiment, scyan, multiassayexperiment, dolomite-se, dolomite_sce, biocpy, celldex
+#7 87.23   Attempting uninstall: requests
+#7 87.24     Found existing installation: requests 2.32.5
+#7 87.25     Uninstalling requests-2.32.5:
+#7 87.26       Successfully uninstalled requests-2.32.5
+#7 88.95 
+#7 88.98 Successfully installed appdirs-1.4.4 biocframe-0.7.2 biocpy-0.2.2 biocutils-0.3.4 celldex-0.3.0 compressed-lists-0.4.4 consensusclustering-0.2.4 delayedarray-0.6.2 dolomite-ranges-0.4.0 dolomite-se-0.3.0 dolomite_base-0.5.1 dolomite_matrix-0.4.1 dolomite_sce-0.3.0 fcswrite-0.6.4 genomicranges-0.8.4 greenlet-3.4.0 gypsum_client-0.2.0 hdf5array-0.5.0 hnswlib-0.8.0 importlib_metadata-9.0.0 iranges-0.7.2 kneed-0.8.6 loguru-0.7.3 minisom-2.3.6 mopsy-0.3.0 multiassayexperiment-0.6.0 openTSNE-1.0.4 pybiocfilecache-0.7.0 pyreadr-0.5.4 pytometry-0.1.6 rds2py-0.9.0 readfcs-2.1.0 requests-2.33.1 scarf-0.29.3 scyan-1.7.6 singlecellexperiment-0.6.2 sqlalchemy-2.0.49 summarizedexperiment-0.6.5
+#7 DONE 91.9s
+
+#8 [5/5] RUN rm -rf /tmp/* /var/tmp/* /root/.cache/pip /var/lib/apt/lists/*
+#8 DONE 0.3s
+
+#9 exporting to image
+#9 exporting layers
+#9 exporting layers 0.5s done
+#9 writing image sha256:eafb202d2c0130b48df8a608501c508e09c208300f1eca15b3cace1c46031e30 done
+#9 naming to docker.io/library/rbio:gpu-v2 done
+#9 DONE 0.5s
+
+ [33m1 warning found (use docker --debug to expand):
+[0m - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "GITHUB_TOKEN") (line 14)
