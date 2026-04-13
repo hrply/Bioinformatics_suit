@@ -12,8 +12,7 @@ FROM ${BASE_IMAGE}
 
 ARG CRAN_URL=https://mirrors.tuna.tsinghua.edu.cn/CRAN
 ARG GITHUB_PROXY=http://192.168.3.147:7890
-#注意补全toke，因为git设置避免toke泄露会被禁止上传
-ENV GITHUB_TOKE=your_token
+ARG TOKEN
 
 # 更新 R 包 (非github 包)
 RUN Rscript -e '\
@@ -41,10 +40,9 @@ RUN Rscript -e '\
     if (nzchar(gh_proxy)) { \
         options(download.file.method = "curl", download.file.extra = paste0("--proxy ", gh_proxy)) \
     }; \
+
     options(repos = c(CRAN = Sys.getenv("CRAN_URL"))); \
     options(BioC_mirror = Sys.getenv("BIOC_URL")); \
-    token <- Sys.getenv("GITHUB_TOKEN"); \
-    print(paste("Using GitHub token:", token)); \
     if (!requireNamespace("remotes", quietly = TRUE)) install.packages("remotes"); \
     if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager"); \
     remotes::install_github("mianaz/srtdisk", upgrade = FALSE, dependencies = TRUE)'
@@ -70,4 +68,3 @@ RUN . /opt/venv/bin/activate && \
 
 # 清理缓存以减小镜像体积
 RUN rm -rf /tmp/* /var/tmp/* /root/.cache/pip /var/lib/apt/lists/*
-ENV GITHUB_TOKE=
