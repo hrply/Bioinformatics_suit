@@ -55,6 +55,8 @@ services:
     env_file:
       - .env
     environment:
+      - TZ=Asia/Shanghai
+
       # RStudio 认证
       - RSTUDIO_USER=${RSTUDIO_USER:-rstudio}
       - RSTUDIO_PASS=${RSTUDIO_PASS:-YourSecurePassword123!}
@@ -98,6 +100,8 @@ services:
       - BIOC_URL=${BIOC_URL:-https://bioconductor.org}
       - PIP_INDEX_URL=${PIP_INDEX_URL:-}
       - PIP_TRUSTED_HOST=${PIP_TRUSTED_HOST:-}
+      - PIP_EXTRA_INDEX_URL=${PIP_EXTRA_INDEX_URL:-}
+      - PIP_CONSTRAINT=${PIP_CONSTRAINT:-}
 
     # -------------------------------------------------------------------------
     # 交互支持
@@ -121,8 +125,12 @@ services:
       - r_local:/custom/r
       - config:/custom/.config
       - cache:/custom/.cache
+      - ./pip_constraints.txt:/custom/python/pip_constraints.txt:rw
       # Rprofile
       - ./Rprofile:/home/rstudio/.Rprofile:rw
+      # AGENTS.md and AGENTS folder
+      - ./AGENTS.md:/AGENTS.md:ro
+      - ./AGENTS:/AGENTS:ro
 
     # -------------------------------------------------------------------------
     # 健康检查
@@ -152,7 +160,7 @@ services:
     # 网络配置
     # -------------------------------------------------------------------------
     networks:
-      - rbio-network
+      - bio-network
 
     # -------------------------------------------------------------------------
     # 工作目录
@@ -160,7 +168,7 @@ services:
     working_dir: /data
 
 networks:
-  rbio-network:
+  bio-network:
     driver: bridge
 
 volumes:

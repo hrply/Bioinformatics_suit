@@ -15,7 +15,9 @@ bash -x build_cu130.sh #如果是早期显卡，就用cu128版
 ```
 ** 注意 **
 
-因为RAPIDS目前最新的26.02仍然基于0.65以下的numba/ 1.x numpy构建，而scanpy新版则基于2.x numpy，存在冲突，因此单独构建了一个docker容器用于运行完整GPU加速分析，而当前环境则用于scanpy等python包和Seurat等R包的一般分析。
+基于官方说明，RAPIDS最好通过conda安装，包括依赖的pytorch以及其他CUDA依赖，避免和系统依赖冲突，也较pypi更稳定。而所有生信软件推荐通过pip安装，更新快，且能够避免conda/mamba解析大量已有预编译包的依赖关系时卡住。
+
+由于docker容器在稳定和可移植的优越性，而python包很多时候更新很快，因此为避免conda环境被pip更新所干扰，还额外提供了一个python生信环境的docker容器配置脚本(./RAPIDS)。
 
 ** 环境测试脚本 **
 

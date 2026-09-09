@@ -1,0 +1,5 @@
+[pypi-options]
+index-url = "https://pypi.tuna.tsinghua.edu.cn/simple"
+
+[channel-priority]
+strict = false

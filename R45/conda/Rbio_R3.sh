@@ -136,7 +136,7 @@ mamba install -y -n "${CONDA_ENV_NAME}" \
     r-ggnewscale \
     r-ks \
     dmlc \
-    xgboost py-xgboost r-xgboost \
+    r-xgboost \
     || echo "[INFO] Some dependencies may already be installed"
 
 # -----------------------------------------------------------------------------

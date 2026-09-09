@@ -569,7 +569,6 @@ devtools::install_github('kharchenkolab/pagoda2', upgrade = FALSE, dependencies 
 remotes::install_github('mojaveazure/seurat-disk', upgrade = TRUE); \
 devtools::install_github('satijalab/seurat-data', upgrade = TRUE); \
 remotes::install_github('satijalab/seurat-wrappers', upgrade = TRUE); \
-remotes::install_github('mianaz/srtdisk', upgrade = FALSE, dependencies = TRUE); \
 BiocManager::install('FlowSOM', ask = FALSE, update = FALSE); \
 BiocManager::install('diffcyt', ask = FALSE, update = FALSE)" && \
     rm -rf /root/.cache/R /tmp/*
@@ -590,6 +589,36 @@ if (!requireNamespace('devtools', quietly = TRUE)) install.packages('devtools');
 devtools::install_github('satijalab/azimuth'); \
 devtools::install_version('plogr', version = '0.2.0', repos = c(cran = Sys.getenv('CRAN_URL')))" && \
     rm -rf /root/.cache/R /tmp/*
+
+# 后续update安装成功的包更新过来
+RUN Rscript -e '\
+    options(repos = c(CRAN = Sys.getenv("CRAN_URL"))); \
+    options(BioC_mirror = Sys.getenv("BIOC_URL")); \
+    if (!requireNamespace("remotes", quietly = TRUE)) install.packages("remotes"); \
+    if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager"); \
+    BiocManager::install(c( \
+        "flowViz", \
+        "ConsensusClusterPlus", \
+        "zellkonverter", \
+        "CytoGLMM", \
+        "CATALYST", \
+        "drc", \
+        "nnls", \
+        "miloR", \
+        "plotrix" \
+    ), ask = FALSE, update = FALSE)'
+
+RUN Rscript -e '\
+    gh_proxy <- Sys.getenv("GITHUB_PROXY"); \
+    if (nzchar(gh_proxy)) { \
+        options(download.file.method = "curl", download.file.extra = paste0("--proxy ", gh_proxy)) \
+    }; \
+    options(repos = c(CRAN = Sys.getenv("CRAN_URL"))); \
+    options(BioC_mirror = Sys.getenv("BIOC_URL")); \
+    if (!requireNamespace("remotes", quietly = TRUE)) install.packages("remotes"); \
+    if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager"); \
+    remotes::install_github("mianaz/srtdisk", upgrade = FALSE, dependencies = TRUE)'
+
 
 # -----------------------------------------------------------------------------
 # Stage 2-15: 最终镜像

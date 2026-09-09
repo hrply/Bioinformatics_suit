@@ -355,26 +355,7 @@ log_info "[Stage 2a] Python 3.12 installed in conda environment"
 log_info "[Stage 2a] Completed."
 
 # -----------------------------------------------------------------------------
-# Stage 2b: Core Python Packages
-# -----------------------------------------------------------------------------
-log_info "[Stage 2b] Installing core Python packages..."
-
-pip install --no-cache-dir \
-    numpy \
-    scipy \
-    pandas \
-    matplotlib \
-    seaborn \
-    numba \
-    h5py \
-    tables \
-    zarr \
-    pyarrow
-
-log_info "[Stage 2b] Completed."
-
-# -----------------------------------------------------------------------------
-# stage 2: Single-cell Python packages Annotation databases - Bioconductor)
+# stage 2b: Single-cell Python packages Annotation databases - Bioconductor)
 # -----------------------------------------------------------------------------
 log_stage "[Stage 2] Single-cell Python + Annotation Databases"
 
@@ -419,23 +400,13 @@ mamba install -y -n "${CONDA_ENV_NAME}" \
     || echo "[INFO] Some dependencies may already be installed"
 
 # -----------------------------------------------------------------------------
-# Stage 2c: Single-cell Analysis Python Packages (CPU only)
-# Note: scvi-tools and cell2location are installed in Rbio_gpu.sh (GPU version)
+# Stage 2c: Core Python Packages
 # -----------------------------------------------------------------------------
-log_info "[Stage 2c] Installing single-cell analysis Python packages (CPU only)..."
+log_info "[Stage 2c] Core Python Packages"
 
 pip install --no-cache-dir \
-    scanpy \
     anndata \
-    leidenalg \
-    python-igraph \
-    louvain \
-    umap-learn \
-    phate \
-    scvelo \
-    squidpy \
-    gseapy \
-    decoupler
+    h5py
 
 log_info "[Stage 2c] Completed."
 

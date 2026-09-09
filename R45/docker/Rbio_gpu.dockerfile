@@ -190,7 +190,6 @@ RUN . /opt/venv/bin/activate && \
     google-generativeai python-dotenv \
     ipykernel ipywidgets jupyterlab \
     nbformat nbconvert
-
 # -----------------------------------------------------------------------------
 # Stage 4m: 环境变量 + 清理
 # -----------------------------------------------------------------------------

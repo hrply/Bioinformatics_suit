@@ -3,14 +3,13 @@
 # Rbio Docker 交互式构建脚本
 # Usage: bash build.sh [options]
 # Options:
-#   --stage N     从指定阶段开始构建 (1=base, 2=R, 3=cpubase/gpubase, 4=final)
-#   --gpu         构建 GPU 版本 (包含 CUDA和RAPIDS)
+#   --stage N     从指定阶段开始构建 (1=base, 2=R, 3=cpubase/gpubase, 4=final)#   --gpu         构建 GPU 版本 (包含 CUDA和RAPIDS)
 #   --final       构建最终镜像 (Jupyter Lab + RStudio)
 #   --from-scratch 从头开始构建（清理旧镜像）
 #
 # 构建流程:
 #   CPU: base → R → CPU_base → final
-#   GPU: base → R → GPU_base → final
+#   GPU: base → R → GPU_base → GPU_final(pixi) → final
 # =============================================================================
 
 set -e
@@ -128,7 +127,7 @@ while [[ $# -gt 0 ]]; do
             echo ""
             echo "构建流程:"
             echo "  CPU: base → R → cpu → final"
-            echo "  GPU: base → R → gpu → final"
+            echo "  GPU: base → R → gpu → gpu-final(pixi) → final"
             echo ""
             echo "示例:"
             echo "  --stage 1 --final --gpu    从stage 1构建到最终GPU镜像"
@@ -459,6 +458,34 @@ build_gpu() {
     return 0
 }
 
+# Stage 3c: GPU pixi 环境构建 (基于 gpubase)
+build_gpu_final() {
+    echo ""
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] 开始构建 Stage 3c: rbio:gpu (pixi 环境)"
+    local logfile="${LOG_DIR}/Rbio_gpu_final_${TIMESTAMP}.log"
+
+    if ! docker images | grep -q "rbio:gpubase"; then
+        echo "ERROR: 依赖镜像 rbio:gpubase 不存在"
+        return 1
+    fi
+
+    local build_args=$(generate_build_args)
+    echo "日志文件: ${logfile}"
+    echo "构建参数: ${build_args}"
+
+    if ! docker build -f "${SCRIPT_DIR}/Rbio_gpu_final.dockerfile" \
+        -t rbio:gpu \
+        ${build_args} \
+        "${SCRIPT_DIR}" 2>&1 | tee "${logfile}"; then
+        echo "ERROR: Stage 3c (gpu pixi) 构建失败"
+        return 1
+    fi
+
+    echo ""
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Stage 3c: rbio:gpu 构建成功"
+    return 0
+}
+
 # Stage 4: Final 构建
 build_final() {
     echo ""
@@ -471,21 +498,21 @@ build_final() {
 
     # 根据 BUILD_GPU 选择构建 CPU 或 GPU 最终镜像
     if [[ "${BUILD_GPU}" == "true" ]]; then
-        if ! docker images | grep -q "rbio:gpubase"; then
-            echo "ERROR: 依赖镜像 rbio:gpubase 不存在"
+        if ! docker images | grep -q "rbio:gpu"; then
+            echo "ERROR: 依赖镜像 rbio:gpu 不存在"
             return 1
         fi
         echo ""
-        echo "构建 rbio:gpu (基于 rbio:gpubase)..."
+        echo "构建 rbio:gpu-final (基于 rbio:gpu)..."
         if ! docker build -f "${SCRIPT_DIR}/Rbio_final.dockerfile" \
             --target gpu \
-            -t rbio:gpu \
+            -t rbio:gpu-final \
             ${build_args} \
             "${SCRIPT_DIR}" 2>&1 | tee -a "${logfile}"; then
-            echo "ERROR: rbio:gpu 构建失败"
+            echo "ERROR: rbio:gpu-final 构建失败"
             return 1
         fi
-        echo "[OK] rbio:gpu 构建成功"
+        echo "[OK] rbio:gpu-final 构建成功"
     else
         if ! docker images | grep -q "rbio:cpubase"; then
             echo "ERROR: 依赖镜像 rbio:cpubase 不存在"
@@ -538,7 +565,7 @@ echo "配置文件: ${CONFIG_FILE}"
 # 如果需要从头构建，清理旧镜像
 if [[ "${FROM_SCRATCH}" == "true" ]]; then
     echo "清理旧镜像..."
-    docker rmi rbio:gpu rbio:cpu rbio:gpubase rbio:cpubase r-bio:R r-bio:base 2>/dev/null || true
+    docker rmi rbio:gpu-final rbio:gpu rbio:cpu rbio:gpubase rbio:cpubase r-bio:R r-bio:base 2>/dev/null || true
 fi
 
 # 根据阶段开始构建
@@ -566,6 +593,10 @@ fi
 if [[ "${STAGE}" -le 3 ]]; then
     if [[ "${BUILD_GPU}" == "true" ]]; then
         if ! build_gpu; then
+            BUILD_STATUS=1
+            exit 1
+        fi
+        if ! build_gpu_final; then
             BUILD_STATUS=1
             exit 1
         fi

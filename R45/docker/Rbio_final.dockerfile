@@ -228,7 +228,7 @@ CMD ["/bin/bash"]
 # Base: rbio:gpubase (已包含 CUDA + GPU Python 包)
 # 继承环境变量同上
 # -----------------------------------------------------------------------------
-FROM r-bio:gpubase AS gpu
+FROM r-bio:gpufinal AS gpu
 
 ARG JUPYTERLAB_VERSION=4.3.5
 

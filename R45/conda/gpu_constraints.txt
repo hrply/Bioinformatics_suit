@@ -1,0 +1,14 @@
+cudf
+cudf-polars
+cudf_kafka
+cupy
+numba==0.64.0
+numba-cuda
+numpy
+numpy-groupies==0.11.3
+nvidia-ml-py
+rapids-dask-dependency
+torch
+torchaudio
+torchcodec
+torchvision

@@ -21,17 +21,7 @@ RUN Rscript -e '\
     if (!requireNamespace("remotes", quietly = TRUE)) install.packages("remotes"); \
     if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager"); \
     BiocManager::install(c( \
-        "diffcyt", \
-        "flowCore", \
-        "flowViz", \
-        "ConsensusClusterPlus", \
-        "zellkonverter", \
-        "CytoGLMM", \
-        "CATALYST", \
-        "drc", \
-        "nnls", \
-        "miloR", \
-        "plotrix" \
+        "xxx", \
     ), ask = FALSE, update = FALSE)'
 
 # 更新 R 包 (github 包)
@@ -44,26 +34,22 @@ RUN Rscript -e '\
     options(BioC_mirror = Sys.getenv("BIOC_URL")); \
     if (!requireNamespace("remotes", quietly = TRUE)) install.packages("remotes"); \
     if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager"); \
-    remotes::install_github("mianaz/srtdisk", upgrade = FALSE, dependencies = TRUE)'
+    remotes::install_github(" ", upgrade = FALSE, dependencies = TRUE)'
 
 RUN . /opt/venv/bin/activate && \
-    # 锁定numpy numba和pandas避免RAPIDS环境损坏 \
-    CUR_NUMPY=$(pip show numpy | grep "^Version:" | awk '{print $2}') && \
-    CUR_PANDAS=$(pip show pandas | grep "^Version:" | awk '{print $2}') && \
-    CUR_NUMBA=$(pip show numba | grep "^Version:" | awk '{print $2}') && \
+    # 锁定numpy numba pandas避免RAPIDS环境损坏 \
+    # 锁定torch全家桶避免pip回溯下载标准版替换cu130 \
+    CORE_PKGS="numpy pandas numba torch torchaudio torchvision torch-geometric rpy2 scvi-tools zarr dask distributed spatialdata tifffile numcodecs" && \
+    LOCK_STR="" && \
+    for pkg in $CORE_PKGS; do \
+        VER=$(pip show $pkg 2>/dev/null | grep "^Version:" | awk '{print $2}'); \
+        [ -n "$VER" ] && LOCK_STR="$LOCK_STR $pkg==$VER"; \
+    done && \
     echo "==================================================" && \
-    echo "🔒 锁定版本: Numpy=${CUR_NUMPY}, Pandas=${CUR_PANDAS}, Numba=${CUR_NUMBA}" && \
+    echo "🔒 锁定核心版本:$LOCK_STR" && \
     echo "==================================================" && \
-    \
-    pip install --no-cache-dir \
-    "numpy==${CUR_NUMPY}" "pandas==${CUR_PANDAS}" "numba==${CUR_NUMBA}" \
-    celldex \
-    biocpy \
-    pyreadr \
-    pytometry \
-    scyan \
-    scarf \
-    openTSNE
+    uv pip install --no-cache $LOCK_STR \
+    xxx
 
 # 清理缓存以减小镜像体积
 RUN rm -rf /tmp/* /var/tmp/* /root/.cache/pip /var/lib/apt/lists/*

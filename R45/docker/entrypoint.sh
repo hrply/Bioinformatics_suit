@@ -49,7 +49,7 @@ echo "========================================"
 export PYTHONPATH="${CUSTOM_PYTHON}${PYTHONPATH:+:$PYTHONPATH}"
 export PATH="${CUSTOM_PYTHON}/bin:${PATH}"
 export R_LIBS_USER="${CUSTOM_R}${R_LIBS_USER:+:$R_LIBS_USER}"
-# 持久化目录
+# 持久化目录，后续单独安装软件时，使用pip install --root /xxx 或 pip install --prefix /xxx 安装。
 CUSTOM_DIRS=(
     "/custom/python"
     "/custom/r"
@@ -130,5 +130,8 @@ chown -R ${RSTUDIO_USER}:${RSTUDIO_USER} /data
 # 转到数据目录
 cd /data
 echo "Starting Jupyter Lab as foreground process..."
+
+# 设置时区
+export TZ=Asia/Shanghai
 
 exec "$@"

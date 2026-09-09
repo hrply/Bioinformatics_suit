@@ -1,0 +1,112 @@
+[workspace]
+name = "scverse-incompat"
+channels = ["https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge", "https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/pytorch"]
+platforms = ["linux-64"]
+channel-priority = "disabled"
+
+[dependencies]
+imagecodecs = "*"
+
+[feature.py312.dependencies]
+python = "3.12.*"
+
+[feature.py311.dependencies]
+python = "3.11.*"
+
+[feature.scverse-deps.dependencies]
+graph-tool = "*"
+pandas = "==2.2.2"
+pip = "*"
+cython = "*"
+fftw = "3.3.*"
+pkg-config = "*"
+setuptools = "<81"
+louvain = "*"
+matplotlib = ">=3.8"
+zarr = "<3"
+cuda-version = "12.4.*"
+pytorch = "*"
+pytorch-cuda = "12.4.*"
+
+[feature.scverse-deps.pypi-dependencies]
+pegasuspy = { version = "*", extras = ["louvain", "scanorama", "torch", "harmony-pytorch", "nmf-torch", "rpy2", "forceatlas2-python", "scvi-tools", "pydeseq2", "gseapy"] }
+dynamo-release = "*"
+pyCrossTalkeR = "*"
+bengrn = "*"
+vitessce = "*"
+multivelo = "*"
+gptbioinsightor = "*"
+cirrocumulus = "*"
+schist = "*"
+omicverse = "*"
+anndata = "<0.11.0"
+
+[feature.pcdl.dependencies]
+pip = "*"
+
+[feature.pcdl.pypi-dependencies]
+pcdl = ">=4.1.0"
+
+[feature.sopa.pypi-dependencies]
+sopa = "*"
+
+[feature.pyucell.dependencies]
+numpy = "<2"
+pip = "*"
+
+[feature.pyucell.pypi-dependencies]
+pyUCell = "*"
+
+[feature.cellxgene.dependencies]
+numpy = "==2.0.1"
+pandas = ">=2.0.0"
+
+[feature.cellxgene.pypi-dependencies]
+cellxgene = "*"
+
+[feature.scarf.dependencies]
+numpy = "==1.26.4"
+pandas = ">=2.0.0"
+
+[feature.scarf.pypi-dependencies]
+scarf = "*"
+
+[feature.mowgli.dependencies]
+numpy = "<2"
+cuda-version = "12.4.*"
+pytorch = "<2"
+pytorch-cuda = "12.4.*"
+
+[feature.mowgli.pypi-dependencies]
+mowgli = "*"
+scanpy = ">=1.0.0,<2.0.0"
+anndata = ">=0.8.0,<0.9.0"
+matplotlib = ">=3.0.0,<4.0.0"
+mudata = ">=0.2.1,<0.3.0"
+scikit-learn = ">=1.0.0,<2.0.0"
+tqdm = ">=4.0.0,<5.0.0"
+
+[feature.sctriangulate.pypi-dependencies]
+scTriangulate = "*"
+gseapy = "==0.10.4"
+squidpy = "==1.2.0"
+
+[feature.delnx.dependencies]
+scipy = "<1.16"
+
+[feature.delnx.pypi-dependencies]
+delnx = "*"
+
+[environments]
+default = { features = ["py312", "scverse-deps"], solve-group = "all-envs" }
+cellxgene = { features = ["py312", "cellxgene"], solve-group = "all-envs" }
+scarf = { features = ["py312", "scarf"], solve-group = "all-envs" }
+mowgli = { features = ["py311", "mowgli"], solve-group = "all-envs" }
+sctriangulate = { features = ["py312", "sctriangulate"], solve-group = "all-envs" }
+sopa = { features = ["py312", "sopa"], solve-group = "all-envs" }
+pcdl = { features = ["py312", "pcdl"], solve-group = "all-envs" }
+delnx = { features = ["py312", "delnx"], solve-group = "all-envs" }
+pyucell = { features = ["py312", "pyucell"], solve-group = "all-envs" }
+
+[pypi-options]
+index-url = "https://pypi.tuna.tsinghua.edu.cn/simple"
